@@ -1,0 +1,26 @@
+name: physics consistency
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Extract engine
+        run: cd test && python3 extract.py
+      - name: Reference figures
+        run: cd test && node bench.js
+      - name: Consistency matrix
+        run: |
+          cd test
+          node consistency.js | tee result.txt
+          if grep -q "  ERROR " result.txt; then echo "consistency check reported errors"; exit 1; fi

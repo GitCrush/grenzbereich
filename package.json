@@ -1,0 +1,21 @@
+{
+  "name": "grenzbereich",
+  "version": "1.1.0",
+  "description": "Browser-based rally vehicle dynamics trainer for the grip limit, with a headless test harness.",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "extract": "cd test && python3 extract.py",
+    "test": "cd test && python3 extract.py && node consistency.js",
+    "bench": "cd test && python3 extract.py && node bench.js",
+    "screenshots": "cd test && node uishot.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas": "^0.1",
+    "node-web-audio-api": "^1",
+    "playwright": "^1"
+  }
+}

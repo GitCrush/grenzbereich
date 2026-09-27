@@ -1,0 +1,6 @@
+node_modules/
+test/engine.js
+test/engine_*.js
+test/*.png
+test/*.wav
+.DS_Store
