@@ -41,7 +41,7 @@ Map a clutch pedal axis (gamepad/wheel) and bypass the launch and stall-protecti
 
 ## 9. Mobile controls: test on devices
 
-The swipe/thumb-wheel controls were built and rendered headless only. Check on a phone: zone widths (42 % / 52 % split), wheel radius, ratio 2.2, whether pointer capture works on iOS Safari, and whether the handbrake button collides with the pedal zone.
+First device test done (thumb crank impractical → slider added and made the default; pedal travel capped by the available room; overlays scroll). Still to check on a phone: slider track length and knob size, whether pointer capture survives the thumb leaving the canvas on iOS Safari, handbrake button versus the pedal zone, portrait layout.
 
 ## Minor
 

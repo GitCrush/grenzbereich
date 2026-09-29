@@ -172,14 +172,17 @@ body.mobile #touchbar{display:flex}
 #touchbar button.hb{width:76px;height:76px}
 /* Start overlay for sensor and audio permissions */
 #start{position:absolute;inset:0;background:rgba(13,12,10,.92);display:none;align-items:center;justify-content:center;
-  flex-direction:column;gap:14px;z-index:60;text-align:center;padding:24px}
+  flex-direction:column;gap:14px;z-index:60;text-align:center;padding:24px;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 #start.on{display:flex}
 #start h1{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--amber);font-weight:700}
 #start p{font-size:12px;color:var(--mute);max-width:420px;line-height:1.6}
 #start button{background:var(--amber);color:#111;border:0;padding:14px 28px;font-family:inherit;font-size:12px;
   letter-spacing:.2em;text-transform:uppercase;border-radius:4px}
 #trackmenu{position:absolute;inset:0;background:rgba(13,12,10,.94);display:none;flex-direction:column;align-items:center;
-  justify-content:center;gap:18px;z-index:55;padding:20px}
+  justify-content:center;gap:18px;z-index:55;padding:20px;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+/* small screens: start at the top so a long menu can scroll instead of being clipped on both ends */
+body.mobile #trackmenu,body.mobile #start{justify-content:flex-start;padding-top:max(20px,env(safe-area-inset-top,0px))}
+body.mobile #trackgrid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));width:100%;max-width:760px}
 #trackmenu.on{display:flex}
 #trackmenu h1{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--amber)}
 #trackmenu p{font-size:10px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
@@ -211,15 +214,15 @@ body.mobile #tiltHint.on{display:block}
 <div id="stage">
   <canvas id="world"></canvas>
   <div id="flash"></div>
-  <div id="tiltHint">Left: swipe up = throttle, down = brake · Right: crank the wheel with your thumb</div>
+  <div id="tiltHint">Left: swipe up = throttle, down = brake · Right: slide left/right to steer</div>
   <div id="trackmenu"><h1>Choose a track</h1><div id="trackgrid"></div>
     <div id="profrow"><span>Elevation profile (Circuit)</span><div class="seg" id="segProf"><button data-v="1" class="on">On</button><button data-v="0">Flat</button></div></div>
     <p>T reopens this menu · Esc closes</p></div>
   <div id="start" class="on">
     <h1>Grenzbereich · Mobile mode</h1>
     <p>Landscape works best. Left half: swipe up for throttle, down for brake – the further from where
-       your thumb landed, the more pedal. Right half: turn the wheel with your thumb, like a crank;
-       it stays where you leave it. Handbrake bottom left, gears and view top right.</p>
+       your thumb landed, the more pedal. Right half: slide your thumb left and right on the bar at the
+       bottom to steer, like the mouse; it stays where you leave it. Handbrake bottom left, gears and view top right.</p>
     <button id="startBtn">Start</button>
   </div>
   <div id="touchbar">
@@ -297,6 +300,8 @@ body.mobile #tiltHint.on{display:block}
       <div class="seg" id="segMet">
         <button data-v="1" class="on">metered (driver)</button><button data-v="0">raw</button>
       </div></div>
+    <div class="set"><label>Touch steering</label>
+      <div class="seg" id="segTmode"><button data-v="slider" class="on">slider (like the mouse)</button><button data-v="wheel">thumb crank</button></div></div>
     <div class="set"><label>Thumb wheel ratio <b><span id="vTr">2.2</span>× thumb angle</b></label>
       <input type="range" id="rTr" min="10" max="40" step="1" value="22"></div>
     <div class="set"><label>Thumb wheel</label>
@@ -680,9 +685,13 @@ function rutSlope(idx,n){      // dz/dn of the ruts
    willing to rotate. Selecting a drivetrain loads its values; the sliders
    stay free to change afterwards. */
 const DRIVE_SETUP={
-  awd:{lsd:0.40,lsdCoast:0.25,roll:0.43,toeR:0.15,rollSteerR:0.10},
-  fwd:{lsd:0.40,lsdCoast:0.25,roll:0.43,toeR:0.15,rollSteerR:0.10},
-  rwd:{lsd:0.60,lsdCoast:0.40,roll:0.48,toeR:0.25,rollSteerR:0.14}
+  awd:{lsd:0.40,lsdCoast:0.25,roll:0.43,toeR:0.15,rollSteerR:0.10,bias:0.76},
+  fwd:{lsd:0.40,lsdCoast:0.25,roll:0.43,toeR:0.15,rollSteerR:0.10,bias:0.76},
+  /* RWD: halfway between a neutral race setup and a forgiving one – a plated
+     1.5-way diff with 45/60 ramps (≈68/45 %), roll stiffness just front of
+     centre, 0.3° rear toe-in, roll understeer at the rear, brake bias a touch
+     further forward since the rear also carries the engine braking. */
+  rwd:{lsd:0.68,lsdCoast:0.45,roll:0.52,toeR:0.32,rollSteerR:0.17,bias:0.78}
 };
 /* Setup templates: complete, measured sets of the setup values, applied at
    once. The drivetrain choice still loads its rear-axle values on top. */
@@ -703,7 +712,7 @@ function applySetupTemplate(name){
 }
 function applyDriveSetup(drive){
   const d=DRIVE_SETUP[drive]; if(!d)return;
-  cfg.lsd=d.lsd; cfg.lsdCoast=d.lsdCoast; cfg.roll=d.roll;
+  cfg.lsd=d.lsd; cfg.lsdCoast=d.lsdCoast; cfg.roll=d.roll; if(d.bias!==undefined)cfg.bias=d.bias;
   CAR.toeR=d.toeR*Math.PI/180; CAR.bsR=d.rollSteerR*2/CAR.tR;
 }
 const VERGE=6;   // verge: up to here the terrain follows the cross slope, beyond it a plateau
@@ -1571,13 +1580,14 @@ function autoShift(dt){
   // otherwise the automatic hunts between limiter (engine speed) and
   // downshift (vehicle speed) while the wheels spin.
   const rpmRefNext=S.gi<top?rpmRef*CAR.gears[S.gi+1].r/CAR.gears[S.gi].r:0;
-  if(S.rpm>7150&&S.gi<top&&IN.thr>0.25&&rpmRefNext>2800){
+  const sliding=Math.abs(Math.atan2(S.vy,Math.abs(S.vx)))>6/57.3;   // nobody shifts mid-slide: the cut is a lift-off, the blip a kick
+  if(S.rpm>7150&&S.gi<top&&IN.thr>0.25&&rpmRefNext>2800&&!sliding){
     /* At the limit the driver still has to shift – on a skidpad the corner never
        ends – but he lifts properly for it: a deeper, longer ease gives the tyres
        the longitudinal reserve to absorb the kick without spinning up. */
     if(!nearLimit||S.holdT>0.5){shift(1);if(atLimit){S.shiftEase=0.45;S.shiftEaseK=CAR.easeDeep;}else if(nearLimit){S.shiftEase=0.35;S.shiftEaseK=CAR.easeNear;}S.holdT=0;}
     else S.holdT+=dt;
-  }else{S.holdT=0;if(rpmRef<2650&&S.gi>2)shift(-1);}
+  }else{S.holdT=0;if(rpmRef<2650&&S.gi>2&&!sliding)shift(-1);}   // and no downshift mid-slide either: blip and engine braking would pulse the rear axle
   if(v<1.0&&S.gi===1&&IN.thr>0.2){S.gi=2;S.shiftLock=0.3;}
 }
 
@@ -1985,6 +1995,11 @@ function drawTouchUI(){
   if(TOUCH.brk>0){cx.fillStyle='#ff3b1f';cx.fillRect(bx-bw/2,by,bw,TOUCH.brk*bh);}
   cx.font=(9*DPR)+'px ui-monospace,monospace';cx.fillStyle='rgba(232,226,214,.45)';cx.textAlign='left';
   cx.fillText('throttle ▲',bx+12*DPR,by-bh+10*DPR);cx.fillText('brake ▼',bx+12*DPR,by+bh-4*DPR);
+  if(TOUCH.mode==='slider'){const g=sliderGeom();const lockHalf=CAR.lock*Math.PI/360;const k=g.xc-clamp(TOUCH.wheel/lockHalf,-1,1)*g.half;
+    cx.fillStyle='rgba(0,0,0,.35)';cx.fillRect(g.x0,g.y-5*DPR,g.x1-g.x0,10*DPR);
+    cx.fillStyle='rgba(232,226,214,.35)';for(const f of [-1,-0.5,0,0.5,1])cx.fillRect(g.xc-f*g.half-1*DPR,g.y-9*DPR,2*DPR,18*DPR);
+    cx.fillStyle=TOUCH.sx!==null?'rgba(255,179,0,.9)':'rgba(255,179,0,.6)';cx.beginPath();cx.arc(k,g.y,9*DPR,0,7);cx.fill();
+    cx.fillStyle='rgba(232,226,214,.45)';cx.textAlign='center';cx.fillText('◀ steer ▶',g.xc,g.y-14*DPR);cx.textAlign='left';}
 }
 function drawSteerHUD(){
   if(!cfg.steerHud)return;
@@ -2690,16 +2705,7 @@ function syncSetupUI(){
   const rs=CAR.bsR*CAR.tR/2;set('rBsR','vBsR',Math.round(rs*100),rs.toFixed(2));
   if(typeof rollLabel==='function')rollLabel();
 }
-function syncDriveSliders(){
-  const d=DRIVE_SETUP[cfg.drive]; if(!d)return;
-  const set=(id,out,val,txt)=>{const e=document.getElementById(id);if(e)e.value=val;const o=document.getElementById(out);if(o)o.textContent=txt;};
-  set('rLsd','vLsd',Math.round(d.lsd*100),Math.round(d.lsd*100));
-  set('rLsdC','vLsdC',Math.round(d.lsdCoast*100),Math.round(d.lsdCoast*100));
-  set('rRoll','vRoll',Math.round(d.roll*100),Math.round(d.roll*100));
-  set('rToeR','vToeR',Math.round(d.toeR*100),d.toeR.toFixed(2));
-  set('rBsR','vBsR',Math.round(d.rollSteerR*100),d.rollSteerR.toFixed(2));
-  if(typeof rollLabel==='function')rollLabel();
-}
+function syncDriveSliders(){syncSetupUI();}   // drivetrain change: full sync
 seg('segUni',(v,b,r)=>{exclusive(b,r);cfg.uniform=v==='1';});
 seg('segRoad',(v,b,r)=>{exclusive(b,r);cfg.driven=v==='1';});
 seg('segThr',(v,b,r)=>{exclusive(b,r);PED.threshold=v==='1';});
@@ -2717,6 +2723,7 @@ eqBind('rVol','vVol','vol',v=>v/100);
 rng('rTs','vTs',v=>TILT.sens=v);rng('rTp','vTp',v=>TILT.pedal=v);
 rng('rTr','vTr',v=>{TOUCH.ratio=v/10;document.getElementById('vTr').textContent=(v/10).toFixed(1);});
 seg('segTret',(v,b,r)=>{exclusive(b,r);TOUCH.ret=v==='1';});
+seg('segTmode',(v,b,r)=>{exclusive(b,r);TOUCH.mode=v;});
 seg('segMouse',(v,b)=>{cfg.mouse=!cfg.mouse;b.classList.toggle('on',cfg.mouse);if(!cfg.mouse)msAbs=false;});
 seg('segFlow',(v,b)=>{cfg[v]=!cfg[v];b.classList.toggle('on',cfg[v]);});
 seg('segRef',(v,b)=>{cfg[v]=!cfg[v];b.classList.toggle('on',cfg[v]);});
@@ -3230,28 +3237,38 @@ function ffbUpdate(){
    the thumb around its centre; the angle the thumb travels around the hub is
    multiplied by a ratio into steering-wheel angle, and the wheel stays where
    it is left, like the mouse. Tilt steering remains available as an option. */
-const TOUCH={ratio:2.2, range:0.34, ret:false, thr:0, brk:0, wheel:0, pedalId:null, wheelId:null, y0:0, a0:0, w0:0, thumb:null};
-function touchZone(x,y){const W=cv.clientWidth;return x<W*0.42?'pedal':x>W*0.52?'wheel':null;}
-function wheelGeom(){const W=cv.width,H=cv.height;const R=clamp(Math.min(W,H)*0.17,60*DPR,130*DPR);return {R,ox:W-R-26*DPR,oy:H-R-30*DPR};}
+const TOUCH={mode:'slider', ratio:2.2, range:0.34, ret:false, thr:0, brk:0, wheel:0, pedalId:null, wheelId:null, y0:0, upR:1, dnR:1, a0:0, w0:0, thumb:null, sx:null};
+function touchZone(x,y){const W=cv.clientWidth;return x<W*0.42?'pedal':x>W*0.50?'wheel':null;}
+function wheelGeom(){const W=cv.width,H=cv.height;const R=clamp(Math.min(W,H)*0.15,52*DPR,110*DPR);return {R,ox:W-R-26*DPR,oy:H-R-(TOUCH.mode==='slider'?64:30)*DPR};}
+/* Steering slider: the horizontal position of the thumb in the right half is
+   the steering-wheel angle, absolute, like the mouse – centre of the track is
+   straight ahead, the ends are full lock. Lifting the thumb keeps the angle
+   (or returns it, see setup). */
+function sliderGeom(){const W=cv.width,H=cv.height;const x0=W*0.53+16*DPR,x1=W-16*DPR;return {x0,x1,xc:(x0+x1)/2,half:(x1-x0)/2,y:H-34*DPR};}
 function setupTouch(){
   const lockHalf=CAR.lock*Math.PI/360;
   cv.addEventListener('pointerdown',e=>{
     if(e.pointerType==='mouse')return;
     const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,z=touchZone(x,y);
-    if(z==='pedal'&&TOUCH.pedalId===null){TOUCH.pedalId=e.pointerId;TOUCH.y0=y;}
-    else if(z==='wheel'&&TOUCH.wheelId===null){const g=wheelGeom();TOUCH.wheelId=e.pointerId;TOUCH.a0=Math.atan2(y*DPR-g.oy,x*DPR-g.ox);TOUCH.w0=TOUCH.wheel;TOUCH.thumb=TOUCH.a0;}
+    if(z==='pedal'&&TOUCH.pedalId===null){TOUCH.pedalId=e.pointerId;TOUCH.y0=y;
+      // travel: a share of the screen height, but never more than the room the thumb actually has – full pedal must always be reachable
+      const H=cv.clientHeight;TOUCH.upR=Math.max(40,Math.min(H*TOUCH.range,y-10));TOUCH.dnR=Math.max(40,Math.min(H*TOUCH.range,H-y-10));}
+    else if(z==='wheel'&&TOUCH.wheelId===null){TOUCH.wheelId=e.pointerId;
+      if(TOUCH.mode==='slider'){const g=sliderGeom();TOUCH.wheel=clamp(-(x*DPR-g.xc)/g.half,-1,1)*lockHalf;TOUCH.sx=x*DPR;}
+      else{const g=wheelGeom();TOUCH.a0=Math.atan2(y*DPR-g.oy,x*DPR-g.ox);TOUCH.w0=TOUCH.wheel;TOUCH.thumb=TOUCH.a0;}}
     cv.setPointerCapture&&cv.setPointerCapture(e.pointerId);e.preventDefault();
   },{passive:false});
   cv.addEventListener('pointermove',e=>{
     if(e.pointerType==='mouse')return;
     const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
-    if(e.pointerId===TOUCH.pedalId){const d=(TOUCH.y0-y)/(cv.clientHeight*TOUCH.range);TOUCH.thr=clamp(d,0,1);TOUCH.brk=clamp(-d,0,1);}
-    else if(e.pointerId===TOUCH.wheelId){const g=wheelGeom();const a=Math.atan2(y*DPR-g.oy,x*DPR-g.ox);let da=a-TOUCH.a0;da=Math.atan2(Math.sin(da),Math.cos(da));
-      // unwrap over several turns: move the reference along
-      TOUCH.a0=a;TOUCH.w0=clamp(TOUCH.w0-da*TOUCH.ratio,-lockHalf,lockHalf);TOUCH.wheel=TOUCH.w0;TOUCH.thumb=a;}
+    if(e.pointerId===TOUCH.pedalId){const dy=TOUCH.y0-y;TOUCH.thr=clamp(dy/TOUCH.upR,0,1);TOUCH.brk=clamp(-dy/TOUCH.dnR,0,1);}
+    else if(e.pointerId===TOUCH.wheelId){
+      if(TOUCH.mode==='slider'){const g=sliderGeom();TOUCH.wheel=clamp(-(x*DPR-g.xc)/g.half,-1,1)*lockHalf;TOUCH.sx=x*DPR;}
+      else{const g=wheelGeom();const a=Math.atan2(y*DPR-g.oy,x*DPR-g.ox);let da=a-TOUCH.a0;da=Math.atan2(Math.sin(da),Math.cos(da));
+        TOUCH.a0=a;TOUCH.w0=clamp(TOUCH.w0-da*TOUCH.ratio,-lockHalf,lockHalf);TOUCH.wheel=TOUCH.w0;TOUCH.thumb=a;}}
     e.preventDefault();
   },{passive:false});
-  const rel=e=>{if(e.pointerId===TOUCH.pedalId){TOUCH.pedalId=null;TOUCH.thr=0;TOUCH.brk=0;}if(e.pointerId===TOUCH.wheelId){TOUCH.wheelId=null;TOUCH.thumb=null;}};
+  const rel=e=>{if(e.pointerId===TOUCH.pedalId){TOUCH.pedalId=null;TOUCH.thr=0;TOUCH.brk=0;}if(e.pointerId===TOUCH.wheelId){TOUCH.wheelId=null;TOUCH.thumb=null;TOUCH.sx=null;}};
   cv.addEventListener('pointerup',rel);cv.addEventListener('pointercancel',rel);
 }
 function touchInput(dt){
@@ -3324,7 +3341,7 @@ function setupMobile(){
 }
 function setupMenuTiers(){
   const more=['View','Eye height','Field of view','Optical flow','References','Overlays','Top-view camera','Damping','Toe front','Toe rear','Roll steer','Torque split','Axle diff lock (coast)',
-    'Road roughness','Centre of gravity','Static camber','Input device','Keyboard pedal','Mouse steering','Mouse travel','Thumb wheel','Tilt control',
+    'Road roughness','Centre of gravity','Static camber','Input device','Keyboard pedal','Mouse steering','Mouse travel','Thumb wheel ratio','Thumb wheel','Tilt control',
     'Tilt for','Pitch for','Volume','Force feedback','Feedback strength'];
   const setup=document.getElementById('setup');
   const box=document.createElement('div');box.id='setMore';

@@ -2,6 +2,16 @@
 
 The simulation was developed iteratively; each step below was measured against the test harness before it was kept.
 
+## 1.2.0
+
+- Mobile steering: a horizontal slider at the bottom right is now the default, absolute like the mouse (centre is straight ahead, the ends are full lock); the thumb-crank wheel stays available (setup: Touch steering). The first device test found the crank impractical.
+- Mobile pedals: the swipe travel adapts to the room the thumb has, so full pedal is always reachable. Start screen and track menu scroll on small screens.
+- Automatic gearbox never shifts while the car is sliding (|β| > 6°): an upshift's ignition cut is a lift-off, a downshift's blip and stronger engine braking pulse the rear axle in the middle of the slide.
+- RWD drivetrain setup revised: a plated 1.5-way diff at 68/45 % (was 60/40 %), 52 % front roll stiffness, 0.32° rear toe-in, 0.17 rear roll steer and 78 % brake bias. Power-on rotation on tarmac halved (+215 % → +102 % yaw rate on a full-throttle stab at 0.45 g), and the inside rear stays on the ground at the limit (the matrix INFO for RWD on tarmac is gone). Measured with `test/rwdmid.js` and `test/rwdsetup.js`.
+- Changing the drivetrain now syncs the whole setup panel, brake bias included.
+- New scenario scripts: `rwdmid.js` (RWD setups between neutral and forgiving), `rwdcatch2.js` (catching a power slide with human reaction time and hand speed), `slideosc.js` (oscillations in a big slide).
+- README screenshots re-taken: the setup panel shows the touch-steering choice.
+
 ## 1.1.0
 
 - Gamepad: a moving stick takes the steering back from the mouse, as the arrow keys do.
