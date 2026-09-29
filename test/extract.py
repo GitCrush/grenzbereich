@@ -9,7 +9,7 @@ js+="""
 globalThis.__sim={
   get S(){return S}, set S(v){S=v}, get IN(){return IN}, set IN(v){IN=v}, get VERT(){return VERT},
   cfg,CAR,SURF,OFF,WHEELS,TRACKS,PED,step,reset,selectTrack,vertInit,mf,engineTorque,shift,autoShift,
-  get TRACK(){return TRACK}, lap, keys, DT, readInput, get frameN(){return frameN}, ghostAI, spawnGhost, get LINE(){return LINE}, GAI, ROAD, applyDriveSetup, DRIVE_SETUP, applySetupTemplate, SETUP_TEMPLATES, TOUCH, touchInput, stepGhost, get ghost(){return ghost}, audioInit, audioUpdate, get AU(){return AU}, set AU(v){AU=v}, draw, drawPerspective, drawTopDown, resize, cam3, VIEW, rollBars:typeof rollBars==='function'?rollBars:null
+  get TRACK(){return TRACK}, lap, keys, DT, readInput, get frameN(){return frameN}, ghostAI, spawnGhost, get LINE(){return LINE}, GAI, ROAD, applyDriveSetup, DRIVE_SETUP, applySetupTemplate, SETUP_TEMPLATES, TOUCH, touchInput, tutorAdvice, stepGhost, get ghost(){return ghost}, audioInit, audioUpdate, get AU(){return AU}, set AU(v){AU=v}, draw, drawPerspective, drawTopDown, resize, cam3, VIEW, rollBars:typeof rollBars==='function'?rollBars:null
 };
 """
 open('engine.js','w',encoding='utf8').write(js)

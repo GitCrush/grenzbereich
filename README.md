@@ -8,11 +8,13 @@ Every mechanism in the physics is written down in the code and measured against 
 
 The simulator is the single file [`index.html`](index.html) in this repository, served by GitHub Pages at [gitcrush.github.io/grenzbereich/index.html](https://gitcrush.github.io/grenzbereich/index.html). Nothing to install: open that address, or download the file and open it locally.
 
-![Driver view on gravel, sliding with the setup panel and telemetry open](docs/screenshots/driver-view-gravel.png)
+![Driver view on gravel: northern forest at dusk](docs/screenshots/driver-view-gravel.png)
 
-| Banked tarmac corner near the limit | Top view: tyre forces, dust, skid marks, phantom and elevation profile |
+| Banked tarmac corner near the limit | Snow: winter forest, snowbanks along the road |
 |---|---|
-| ![](docs/screenshots/driver-view-banked-tarmac.png) | ![](docs/screenshots/top-view-gravel.png) |
+| ![](docs/screenshots/driver-view-banked-tarmac.png) | ![](docs/screenshots/driver-view-snow.png) |
+
+![Top view with the full interface: tyre forces, dust, skid marks, phantom and elevation profile](docs/screenshots/top-view-gravel.png)
 
 ## What it is for
 
@@ -20,9 +22,10 @@ The interesting part of driving a rally car happens in the last ten percent of g
 
 - **Tyre usage per axle** in the HUD, load-weighted, colour-coded from the torque peak to the grip limit.
 - **A phantom** that drives the same car on the ideal line with a consistent driver model, so you can see where it brakes and how much it slides.
+- **A tutor** (`U`): silent while the car is stable; when it starts to go – excess yaw the tyres cannot sustain – a green band on the steering ribbon shows where the wheel has to go (the neutral steer at which the front tyres run along their own direction of travel, plus a correction against the rotation) and one word says what to do. It reads the state only; it never touches the input.
 - **A data logger** (14-second ring buffer) with an incident detector that freezes the window around a breakaway and names the probable cause — lift-off, locked wheels, power-on, entry speed.
 - **Exercises**: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
-- **Instrumented views**: a top view whose zoom covers your braking distance, and a driver view built as a flow field (near-field texture, guide posts, road edge, vehicle axis vs. velocity vanishing point — the horizontal distance between the two *is* the slip angle).
+- **Instrumented views**: a top view whose zoom covers your braking distance, and a driver view built as a flow field (near-field texture, guide posts, road edge, vehicle axis vs. velocity vanishing point — the horizontal distance between the two *is* the slip angle), set in a dusk scenery per surface: sky gradient, a low sun and distant ridges at infinity that move only with yaw, aerial haze over road and ground. Each surface has its own country – tarmac a southern mountain road (snow-capped jagged ranges, cypresses, broad-leaved trees, rock outcrops, clear air), gravel a northern forest (rolling hills, pine and birch, boulders, dusty haze), snow a winter forest (low rounded hills, dense spruce with snow on the branches, snowbanks lining the road). The scenery can be switched off for the bare channel view.
 
 ## Physics model
 
@@ -66,13 +69,13 @@ Every merged change must keep `test/consistency.js` clean: 108 scenarios across 
 | Handbrake | Space | | A |
 | Gears | E / Q | | bumpers |
 
-`R` reset · `B` back on track · `T` track menu · `O` setup · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
+`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
 
 On phones and tablets (landscape): swipe up on the left half for throttle and down for brake – the travel from where the thumb landed sets the pedal, and full pedal is always within reach – and steer with the thumb on the horizontal slider at the bottom right, absolute like the mouse; it stays where you leave it (or returns to centre, see setup). A thumb-crank wheel is available as an alternative. Handbrake bottom left, gears and view top right. Tilt steering remains available as an option. Logitech wheels get constant-force feedback through WebHID in Chromium browsers.
 
 ## Setup
 
-Three templates load complete, measured setups: **Gravel** (the base: soft, rear-biased roll stiffness, 76 % front brake bias, diff locks 40/25 %), **Tarmac** (stiffer and lower, 52 % front roll stiffness so the inside rear stays on the ground at the limit, 82 % front brake, locks 40/25 %) and **RWD drift** (rear-wheel drive with a strong rear diff, 75/50 %, and a stable rear axle). Selecting a drivetrain loads its rear-axle values on top (rear-wheel drive: a plated 1.5-way diff at 68/45 %, 52 % front roll stiffness, 0.32° rear toe-in, 0.17 rear roll steer, 78 % front brake bias – halfway between a neutral race setup and a forgiving one).
+The surface decides the setup: choosing Gravel, Tarmac or Snow loads that surface's template (and the rear-wheel-drive values on top if RWD is selected). Four templates load complete, measured setups: **Gravel** (the base: soft, rear-biased roll stiffness, 76 % front brake bias, diff locks 40/25 %), **Tarmac** (stiffer and lower, 52 % front roll stiffness so the inside rear stays on the ground at the limit, 82 % front brake, locks 40/25 %) **Snow** (soft and gentle: 72 % front brake, locks 45/30 %, softer damping) and **RWD drift** (rear-wheel drive with a strong rear diff, 75/50 %, and a stable rear axle). Selecting a drivetrain loads its rear-axle values on top (rear-wheel drive: a plated 1.5-way diff at 68/45 %, 52 % front roll stiffness, 0.32° rear toe-in, 0.17 rear roll steer, 78 % front brake bias – halfway between a neutral race setup and a forgiving one).
 
 The setup panel (`O`) exposes the quantities a rally team would adjust: surface, drive type, centre lock and split, axle lock on drive and coast, brake bias, roll distribution and roll gradient, static camber, toe, rear roll steer, damping, CoG height, ABS and traction control as training aids, anti-lag, keyboard pedal travel and threshold braking, steering mode, road state, elevation profile, and the visual channels of the driver view.
 
@@ -95,7 +98,7 @@ node consistency.js         # the scenario matrix, 2–3 minutes
 node bench.js               # the reference figures
 ```
 
-With `@napi-rs/canvas` and `node-web-audio-api` installed, `shot.js` renders the driver view without a browser and `soundtest.js` renders sound demos as WAV — useful for reviewing changes. The README screenshots come from `uishot.js`, which drives the page in a headless Chromium through Playwright, with the phantom's driver model at the wheel.
+With `@napi-rs/canvas` and `node-web-audio-api` installed, `shot.js` renders the driver view without a browser and `soundtest.js` renders sound demos as WAV — useful for reviewing changes. The driver views in this README are such renders; the top view comes from `uishot.js`, which drives the page in a headless Chromium through Playwright, with the phantom's driver model at the wheel and the full interface around it.
 
 ## Contributing
 

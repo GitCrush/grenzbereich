@@ -230,11 +230,12 @@ body.mobile #tiltHint.on{display:block}
     <button id="tbDown"><b>−</b>Gear</button>
     <button id="tbUp"><b>+</b>Gear</button>
     <button id="tbBack"><b>B</b>Back</button>
+    <button id="tbTut"><b>U</b>Tutor</button>
   </div>
   <div id="hbBtn"><button id="tbHb"><b>HB</b>Handbrake</button></div>
   <div id="keys">
     <b>← →</b> steer &nbsp; <b>↑</b> throttle &nbsp; <b>↓</b> brake &nbsp; <b>Space</b> handbrake &nbsp; <b>Shift</b> clutch<br>
-    <b>LMB</b> clutch &nbsp; <b>RMB</b> brake &nbsp; <b>C</b> view &nbsp; <b>H</b> telemetry &nbsp; <b>E / Q</b> gear &nbsp; <b>Z</b> replay &nbsp; <b>T</b> track &nbsp; <b>P</b> excerpt &nbsp; <b>L</b> data logger (CSV) &nbsp; <b>G</b> ghost &nbsp; <b>M</b> sound &nbsp; <b>B</b> back on track &nbsp; <b>R</b> restart &nbsp; <b>O</b> setup &nbsp; <b>+ −</b> zoom<br>
+    <b>LMB</b> clutch &nbsp; <b>RMB</b> brake &nbsp; <b>C</b> view &nbsp; <b>H</b> telemetry &nbsp; <b>E / Q</b> gear &nbsp; <b>Z</b> replay &nbsp; <b>T</b> track &nbsp; <b>P</b> excerpt &nbsp; <b>L</b> data logger (CSV) &nbsp; <b>G</b> ghost &nbsp; <b>M</b> sound &nbsp; <b>B</b> back on track &nbsp; <b>R</b> restart &nbsp; <b>O</b> setup &nbsp; <b>U</b> tutor &nbsp; <b>+ −</b> zoom<br>
     <span id="padNote"><b>Gamepad</b> is detected automatically (analogue steering recommended)</span>
   </div>
 
@@ -242,7 +243,7 @@ body.mobile #tiltHint.on{display:block}
     <h2>Setup</h2>
     <div class="set"><label>Surface</label>
       <div class="seg" id="segSurf">
-        <button data-v="tarmac" class="on">Tarmac</button><button data-v="gravel">Gravel</button><button data-v="snow">Snow</button>
+        <button data-v="tarmac">Tarmac</button><button data-v="gravel" class="on">Gravel</button><button data-v="snow">Snow</button>
       </div></div>
     <div class="set"><label>Surroundings off the road</label>
       <div class="seg" id="segUni">
@@ -253,7 +254,7 @@ body.mobile #tiltHint.on{display:block}
         <button data-v="1" class="on">driven line</button><button data-v="0">uniform</button>
       </div></div>
     <div class="set"><label>Setup template</label>
-      <div class="seg" id="segTpl"><button data-v="Gravel" class="on">Gravel</button><button data-v="Tarmac">Tarmac</button><button data-v="RWD drift">RWD drift</button></div></div>
+      <div class="seg" id="segTpl"><button data-v="Gravel" class="on">Gravel</button><button data-v="Tarmac">Tarmac</button><button data-v="Snow">Snow</button><button data-v="RWD drift">RWD drift</button></div></div>
     <div class="set"><label>Drivetrain</label>
       <div class="seg" id="segDrive">
         <button data-v="awd" class="on">4WD</button><button data-v="rwd">RWD</button><button data-v="fwd">FWD</button>
@@ -342,7 +343,7 @@ body.mobile #tiltHint.on{display:block}
       </div></div>
     <div class="set"><label>Optical flow</label>
       <div class="seg" id="segFlow">
-        <button data-v="near" class="on">Near field</button><button data-v="far" class="on">Far field</button><button data-v="posts" class="on">Posts</button>
+        <button data-v="near" class="on">Near field</button><button data-v="far" class="on">Far field</button><button data-v="posts" class="on">Posts</button><button data-v="scenery" class="on">Scenery</button>
       </div></div>
     <div class="set"><label>References</label>
       <div class="seg" id="segRef">
@@ -351,7 +352,7 @@ body.mobile #tiltHint.on{display:block}
     <div class="set"><label>Volume <b><span id="vVol">90</span> %</b></label>
       <input type="range" id="rVol" min="0" max="100" value="90"></div>
     <div class="set"><label>Overlays</label>
-      <div class="seg" id="segViz"><button data-v="sound" class="on">Sound</button><button data-v="antilag" class="on">Anti-lag</button><button data-v="steerHud" class="on">Wheel</button><button data-v="forces">Tyre forces</button><button data-v="trace" class="on">Skid marks</button></div></div>
+      <div class="seg" id="segViz"><button data-v="sound" class="on">Sound</button><button data-v="antilag" class="on">Anti-lag</button><button data-v="steerHud" class="on">Wheel</button><button data-v="forces">Tyre forces</button><button data-v="trace" class="on">Skid marks</button><button data-v="tutor">Tutor</button></div></div>
   </div>
 </div>
 
@@ -437,7 +438,7 @@ const SURF={
   gravel:makeSurface({key:'gravel',label:'Gravel',mu:0.88,kP:0.140,aP:0.185,tail:0.80,fall:1.10,plow:0.07,plowDyn:10,soft:0.00,rough:0.048,absS:0.17,
                       roll:0.024,fill:'#242019',edge:'#544a3c',fill3:'#3a3227',edge3:'#a4977c'}),
   snow  :makeSurface({key:'snow',label:'Snow',mu:0.52,kP:0.130,aP:0.160,tail:0.84,fall:1.30,plow:0.07,plowDyn:5,soft:0.00,rough:0.026,absS:0.14,
-                      roll:0.030,fill:'#1e2126',edge:'#4d545c',fill3:'#333a42',edge3:'#8e99a4'}),
+                      roll:0.030,fill:'#1e2126',edge:'#4d545c',fill3:'#848c96',edge3:'#b9c1c9'}),
 };
 const OFF=makeSurface({key:'off',label:'off road',mu:0.55,kP:0.180,aP:0.200,tail:0.82,fall:1.20,plow:0.05,plowDyn:10,soft:0.35,rough:0.085,absS:0.17,
                        roll:0.040,fill:'#0f0e0c',edge:'#1a1815',fill3:'#0f0e0c',edge3:'#1a1815'});
@@ -519,10 +520,10 @@ const WHEELS=[
   {id:'RR',rx:-CAR.b, ry:-CAR.tR/2, front:false},
 ];
 
-const cfg={surface:'tarmac',drive:'awd',auto:true,split:0.50,lsd:0.40,lsdCoast:0.25,profile:true,driven:true,
+const cfg={surface:'gravel',drive:'awd',auto:true,split:0.50,lsd:0.40,lsdCoast:0.25,profile:true,driven:true,
            bias:0.76,roll:0.43,rollGrad:3.2,bal:0,clock:1.0,camber:-2.5,abs:false,tc:false,ret:false,
            forces:false,trace:true,
-           view:'persp',near:true,far:true,posts:true,edges:true,
+           view:'persp',near:true,far:true,posts:true,edges:true,scenery:true,tutor:false,
            axis:true,vp:true,bodymo:true,steer:'direct',steerHud:true,mouse:true,uniform:true,antilag:true,sound:true,camPath:true};
 
 let S={ // State
@@ -625,7 +626,7 @@ function buildTrack(def){
   let sa=0,sn=7;const bush=[];
   for(let i=0;i<N;i++){const p=pts[i];sa+=p.seg;if(sa>=sn){p.seam=0.5+h2(i,5,13)*0.5;sa=0;sn=6+h2(i,6,14)*10;}
     if(h2(i,7,15)<0.16){const side=h2(i,8,16)<0.5?1:-1,d=p.w+2+h2(i,9,17)*7;
-      bush.push({x:p.x+side*p.nx*d,y:p.y+side*p.ny*d,h:0.4+h2(i,10,18)*0.9,r:0.5+h2(i,11,19)*0.9});}}
+      bush.push({x:p.x+side*p.nx*d,y:p.y+side*p.ny*d,h:0.4+h2(i,10,18)*0.9,r:0.5+h2(i,11,19)*0.9,i});}}
   for(const b of bush)b.z=zOf(b.x,b.y);
   pts.bush=bush;
   return {pts,N,len,cones,apex,brk,ex:def.ex,name:def.name,line:def.line||'band',ghostLat:def.ghostLat||null,hasZ:!!useProf,zMin,zMax};
@@ -700,6 +701,8 @@ const SETUP_TEMPLATES={
              roll:0.43,rollGrad:3.2,bias:0.76,camber:-2.5,lsd:0.40,lsdCoast:0.25,toeF:-0.10,toeR:0.15,rollSteerR:0.10,dmp:1.0,h:0.56,clock:1.0,split:0.5},
   'Tarmac': {desc:'stiffer, lower, front-biased roll stiffness so the inside rear stays down, more front brake',
              roll:0.52,rollGrad:2.4,bias:0.82,camber:-3.0,lsd:0.40,lsdCoast:0.25,toeF:-0.05,toeR:0.20,rollSteerR:0.10,dmp:1.15,h:0.52,clock:1.0,split:0.5},
+  'Snow':   {desc:'soft and gentle: less brake, less lock, softer damping – grip is scarce and comes slowly',
+             roll:0.45,rollGrad:3.4,bias:0.72,camber:-2.0,lsd:0.45,lsdCoast:0.30,toeF:-0.05,toeR:0.20,rollSteerR:0.12,dmp:0.9,h:0.56,clock:1.0,split:0.5},
   'RWD drift': {desc:'rear-wheel drive with a strong rear diff and a stable rear axle',drive:'rwd',
              roll:0.53,rollGrad:3.0,bias:0.70,camber:-2.5,lsd:0.75,lsdCoast:0.50,toeF:-0.10,toeR:0.35,rollSteerR:0.18,dmp:1.0,h:0.56,clock:1.0,split:0.5}
 };
@@ -951,6 +954,7 @@ addEventListener('keydown',e=>{
     [...r.children].forEach(c=>c.classList.toggle('on',c.dataset.v===cfg.view));
   }
   if(k==='h')document.getElementById('hud').classList.toggle('off');
+  if(k==='u'){cfg.tutor=!cfg.tutor;const b=document.querySelector('#segViz [data-v=tutor]');if(b)b.classList.toggle('on',cfg.tutor);flash(cfg.tutor?'Tutor on – green marks show where to steer':'Tutor off');}
   if(k==='m'){cfg.sound=!cfg.sound;const b=document.querySelector('#segViz [data-v=sound]');if(b)b.classList.toggle('on',cfg.sound);}
   if(k==='v'){cfg.view=cfg.view==='top'?'persp':'top';
     const r=document.getElementById('segView');
@@ -2001,6 +2005,35 @@ function drawTouchUI(){
     cx.fillStyle=TOUCH.sx!==null?'rgba(255,179,0,.9)':'rgba(255,179,0,.6)';cx.beginPath();cx.arc(k,g.y,9*DPR,0,7);cx.fill();
     cx.fillStyle='rgba(232,226,214,.45)';cx.textAlign='center';cx.fillText('◀ steer ▶',g.xc,g.y-14*DPR);cx.textAlign='left';}
 }
+/* ═══════════ Tutor ═══════════
+   The tutor speaks only when the car is becoming unstable, and then it shows
+   one thing: the correction – where the hand has to go. The reference is the
+   neutral steer, the road-wheel angle at which the front tyres run along their
+   own direction of travel and add no yaw: θf = atan2(vy + a·r, vx). The
+   instability measure is the excess yaw rate r − ay/v, the rate at which the
+   slip angle is growing. The correction is a front slip angle against the
+   rotation, 0.3° per °/s of excess, capped at the tyre's peak. Both are
+   low-pass filtered (60 ms) so road roughness does not twitch the marks, and
+   the tutor switches on with hysteresis: in when the excess exceeds 9 °/s
+   with the rear axle beyond its peak, out when it has fallen below 3 °/s.
+   Nothing is shown while the car is stable, and nothing touches the input. */
+let TUT_ON=false,TUT_LAST=null;
+function tutorAdvice(){
+  const v=Math.hypot(S.vx,S.vy);if(v<4){TUT_ON=false;return null;}
+  const thF=dsp('tutThF',Math.atan2(S.vy+CAR.a*S.r,S.vx),0.06);
+  const excess=dsp('tutEx',S.r-S.ay/Math.max(v,1),0.06);
+  const beta=Math.atan2(S.vy,Math.abs(S.vx));
+  const rearUse=dsp('tutRU',axleUse(1),0.06);
+  const unstable=Math.abs(excess)>0.16&&(rearUse>0.95||Math.abs(beta)>0.10);
+  if(!TUT_ON&&unstable)TUT_ON=true;
+  else if(TUT_ON&&Math.abs(excess)<0.05&&Math.abs(beta)<0.06)TUT_ON=false;
+  if(!TUT_ON)return null;
+  const aP=SURF[cfg.surface].aP;
+  const corr=clamp(-excess*0.30,-aP,aP);
+  const kR=cfg.drive==='fwd'?Math.max(S.kappa[0],S.kappa[1]):Math.max(S.kappa[2],S.kappa[3]);
+  const word=Math.abs(excess)>0.10?(kR>0.15?'lift · counter-steer':'counter-steer'):'unwind';
+  return {neutral:thF,target:thF+corr,excess,word};
+}
 function drawSteerHUD(){
   if(!cfg.steerHud)return;
   const W=cv.width,H=cv.height;
@@ -2010,26 +2043,34 @@ function drawSteerHUD(){
   const R=mobile?g.R:clamp(Math.min(W,H)*0.075,26*DPR,74*DPR);
   const ox=mobile?g.ox:W/2, oy=mobile?g.oy:H-R*1.42;
   const hw=S.delta*CAR.ratio;                  // steering-wheel angle [rad]
-  const sf=Math.max(S.slip[0],S.slip[1]);
+  const sf=dsp('sfW',Math.max(S.slip[0],S.slip[1]),0.10);
   const col=sf>1.0?'#ff3b1f':sf>0.40?'#ffb300':'#e8e2d6';
-  const tq=Math.abs(S.Tw||0);
+  const tq=Math.abs(dsp('tqW',S.Tw||0,0.10));
 
   // Two centred bars above the wheel: lateral acceleration against the grip
   // limit and steering-wheel angle against the lock. Both left/right.
   {
     const bw=R*2.6, bx=ox-bw/2, y1=oy-R-30*DPR, y2=y1+11*DPR, bh=5*DPR;
     const mu=SURF[cfg.surface].mu;
-    const ayN=clamp(S.ay/(mu*9.81),-1.2,1.2);
+    const ayN=clamp(dsp('ayN',S.ay,0.10)/(mu*9.81),-1.2,1.2);
     const hwN=clamp(hw/(CAR.lock*Math.PI/360),-1,1);
     cx.fillStyle='rgba(0,0,0,.55)'; cx.fillRect(bx,y1,bw,bh); cx.fillRect(bx,y2,bw,bh);
     cx.fillStyle='rgba(232,226,214,.35)'; cx.fillRect(ox-0.5*DPR,y1-2*DPR,1*DPR,bh+4*DPR); cx.fillRect(ox-0.5*DPR,y2-2*DPR,1*DPR,bh+4*DPR);
-    const useF=Math.max(S.slip[0],S.slip[1]);
+    const useF=dsp('useF',Math.max(S.slip[0],S.slip[1]),0.10);
     cx.fillStyle=useF>1?'#ff3b1f':useF>0.4?'#ffb300':'#6fd3e0';
     const w1=ayN*bw/2; cx.fillRect(ayN>0?ox-w1:ox,y1,Math.abs(w1),bh);       // + = left
     cx.fillStyle='#e8e2d6';
     const w2=hwN*bw/2; cx.fillRect(hwN>0?ox-w2:ox,y2,Math.abs(w2),bh);
     cx.font=(8*DPR)+'px ui-monospace,monospace'; cx.textAlign='right'; cx.fillStyle='rgba(232,226,214,.45)';
     cx.fillText('lat',bx-5*DPR,y1+bh); cx.fillText('steer',bx-5*DPR,y2+bh); cx.textAlign='left';
+    // tutor: the correction on the steering ribbon – a green band from where the wheel is to where it should be, only while the car is unstable
+    const tut=cfg.tutor?tutorAdvice():null;
+    if(tut){const lockHalf=CAR.lock*Math.PI/360;const xC=ox-hwN*bw/2, xT=ox-clamp(tut.target*CAR.ratio/lockHalf,-1,1)*bw/2;
+      cx.fillStyle='rgba(88,214,120,.50)';cx.fillRect(Math.min(xC,xT),y2-3*DPR,Math.max(2*DPR,Math.abs(xT-xC)),bh+6*DPR);
+      cx.fillStyle='#58d678';cx.fillRect(xT-1.5*DPR,y2-6*DPR,3*DPR,bh+12*DPR);
+      cx.font=(10*DPR)+'px ui-monospace,monospace';cx.textAlign='center';cx.fillStyle='#58d678';cx.fillText(tut.word,ox,y1-9*DPR);cx.textAlign='left';}
+    else if(cfg.tutor){cx.font=(8*DPR)+'px ui-monospace,monospace';cx.textAlign='right';cx.fillStyle='rgba(88,214,120,.35)';cx.fillText('tutor',ox+bw/2,y1-9*DPR);cx.textAlign='left';}   // a faint state mark, nothing else while stable
+    TUT_LAST=null;
   }
   // fixed zero mark
   cx.fillStyle='rgba(232,226,214,.55)';
@@ -2164,6 +2205,82 @@ function fillCam(P,style){
   cx.closePath(); cx.fill();
 }
 
+/* ═══════════ Scenery: sky, ridges, haze ═══════════
+   Dusk light per surface. Three things, each still a channel: the sky
+   gradient and the distant ridges sit at infinity and move only with yaw
+   (pure rotational flow, a steadier far field than the poles alone); the haze
+   fades road and ground with distance (aerial perspective, a depth cue the
+   flat colours lacked). Switch off under Optical flow → Scenery for the bare
+   channel view. */
+/* Each surface stands for a kind of rally country:
+   tarmac – a mountain road in the south: high, jagged ranges, cypresses and
+     broad-leaved trees, rock outcrops, sparse growth, clear warm air;
+   gravel – rolling forest country in the north: pine and birch mixed,
+     boulders beside the road, dusty haze;
+   snow – a winter forest: dense spruce with snow on the branches, low
+     rounded hills, snowbanks lining the road, pale flat light.
+   veg: share of the verge vegetation per kind (the rest stays low bushes). */
+const SCENE={
+  tarmac:{skyTop:'#0a0d18',skyHor:'#453d44',sun:'rgba(232,168,112,',haze:'#3e3a38',hazeL:520,gFar:'#2e2b27',gNear:'#131210',verge:'#171512',
+          ridges:['#373547','#2b2a34','#1e1d20'],ridgeShape:[[5.2,2.3,1.15],[2.9,1.3,1.15],[1.0,0.45,0.9]],ridgeFade:[0.32,0.18,0.06],
+          veg:{cypress:0.22,decid:0.18,conifer:0.06,rock:0.24},tree:'#131a13',crown:'#1a2216',rock:'#3a3631',bush:'#1c1f18',snowCap:false,bank:false},
+  gravel:{skyTop:'#0b0e17',skyHor:'#4a4236',sun:'rgba(226,164,98,',haze:'#453c31',hazeL:380,gFar:'#3a3226',gNear:'#15120e',verge:'#1a1611',
+          ridges:['#3b3a44','#2e2c2e','#211e1a'],ridgeShape:[[2.6,1.1,0.8],[1.5,0.7,0.8],[0.7,0.35,0.8]],
+          veg:{conifer:0.34,decid:0.22,rock:0.14,cypress:0},tree:'#141a12',crown:'#1d2417',rock:'#3d362d',bush:'#20231a',snowCap:false,bank:false},
+  snow:  {skyTop:'#18202e',skyHor:'#6c7786',sun:'rgba(226,232,240,',haze:'#66707d',hazeL:340,gFar:'#8a929c',gNear:'#58606a',verge:'#5c646e',
+          ridges:['#9aa3ae','#7d8793','#5d6672'],ridgeShape:[[1.6,0.7,0.6],[1.0,0.45,0.6],[0.5,0.25,0.6]],
+          veg:{conifer:0.66,decid:0.08,rock:0,cypress:0},tree:'#17201a',crown:'#2a2f2b',rock:'#6e7680',bush:'#2c342d',snowCap:true,bank:true}
+};
+const _rgb={};function rgbOf(h){if(_rgb[h])return _rgb[h];const n=parseInt(h.slice(1),16);return _rgb[h]=[n>>16&255,n>>8&255,n&255];}
+function mixCol(a,b,f){const A=rgbOf(a),B=rgbOf(b);return 'rgb('+Math.round(A[0]+(B[0]-A[0])*f)+','+Math.round(A[1]+(B[1]-A[1])*f)+','+Math.round(A[2]+(B[2]-A[2])*f)+')';}
+const _hz={};
+function hazed(col,sc,d){if(!sc)return col;const b=Math.min(60,Math.round(Math.max(0,d)/8));const key=col+'|'+sc.haze+'|'+b;   // 8 m buckets, cached: the same string every frame
+  return _hz[key]||(_hz[key]=mixCol(col,sc.haze,1-Math.exp(-b*8/sc.hazeL)));}
+// ridges: three layers per surface, elevation angle over azimuth, periodic in 2π, deterministic.
+// shape: [base °, amplitude °, jaggedness] – jaggedness weights the high harmonics (sharp alpine peaks vs. rounded hills)
+const _ridgeCache={};
+function ridgesFor(sc){const key=JSON.stringify(sc.ridgeShape);if(_ridgeCache[key])return _ridgeCache[key];
+  let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  return _ridgeCache[key]=sc.ridgeShape.map(([base,amp,jag])=>{const terms=[];for(let k=0;k<7;k++){const fr=[2,3,5,7,11,17,29][k];terms.push([fr,amp*(0.9/(1+k*0.6))*(0.6+0.8*rnd()),rnd()*6.283]);}
+    // jagged ranges: a chain of peaks with straight flanks instead of a sum of sines
+    const peaks=[];if(jag>1.1){const n=22;for(let k=0;k<n;k++)peaks.push([k/n*6.283+rnd()*0.2,base*(0.55+0.9*rnd()),0.07+0.16*rnd()]);}
+    return {base,terms,jag,peaks};});}
+function ridgeElev(L,a){let e;
+  if(L.peaks.length){e=L.base*0.28;for(const [c,A,w] of L.peaks){let d=a-c;d=Math.atan2(Math.sin(d),Math.cos(d));const t=1-Math.abs(d)/w;if(t>0)e=Math.max(e,L.base*0.28+A*Math.pow(t,1.15));}
+    for(const [fr,am,ph] of L.terms)e+=0.15*am*Math.sin(fr*a+ph);}
+  else{e=L.base;for(const [fr,am,ph] of L.terms)e+=am*Math.sin(fr*a+ph);}
+  return Math.max(0.05,e)*Math.PI/180;}
+function horizonFrame(hz){const mx=(hz[0][0]+hz[1][0])/2,my=(hz[0][1]+hz[1][1])/2;let dx=hz[1][0]-hz[0][0],dy=hz[1][1]-hz[0][1];const l=Math.hypot(dx,dy)||1;let nx=-dy/l,ny=dx/l;if(ny<0){nx=-nx;ny=-ny;}return {mx,my,nx,ny};}
+function drawSky(sc,hz,W,H){
+  const F=horizonFrame(hz),top=Math.max(H,W)*0.9;
+  const g=cx.createLinearGradient(F.mx-F.nx*top,F.my-F.ny*top,F.mx,F.my);
+  g.addColorStop(0,sc.skyTop);g.addColorStop(0.72,mixCol(sc.skyTop,sc.skyHor,0.45));g.addColorStop(1,sc.skyHor);
+  cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  // low sun glow in a fixed world direction (west-south-west): a rotation cue, not decoration
+  const sa=3.5,c=toCam(cam3.ex+Math.cos(sa)*60000,cam3.ey+Math.sin(sa)*60000,60000*Math.tan(2.5*Math.PI/180));
+  if(c.z>NEAR){const q=proj(c),R=Math.max(W,H)*0.45;const rg=cx.createRadialGradient(q[0],q[1],0,q[0],q[1],R);
+    rg.addColorStop(0,sc.sun+'0.30)');rg.addColorStop(0.25,sc.sun+'0.10)');rg.addColorStop(1,sc.sun+'0)');cx.fillStyle=rg;cx.fillRect(q[0]-R,q[1]-R,2*R,2*R);}   // only the glow's own square, not the whole canvas
+}
+function groundFill(sc,hz,H){const F=horizonFrame(hz);const g=cx.createLinearGradient(F.mx,F.my,F.mx+F.nx*H*0.9,F.my+F.ny*H*0.9);
+  g.addColorStop(0,mixCol(sc.gFar,sc.haze,0.55));g.addColorStop(0.18,sc.gFar);g.addColorStop(1,sc.gNear);return g;}
+function drawRidges(sc){
+  const psi=Math.atan2(cam3.fy,cam3.fx),D=60000;
+  const RIDGES=ridgesFor(sc);
+  for(let l=0;l<RIDGES.length;l++){const L=RIDGES[l],col=mixCol(sc.ridges[l],sc.skyHor,(sc.ridgeFade||[0.55,0.3,0.1])[l]);
+    const top=[],bot=[];
+    for(let a=psi-1.3;a<=psi+1.3;a+=0.012){const ca=Math.cos(a),sa=Math.sin(a);
+      const c1=toCam(cam3.ex+ca*D,cam3.ey+sa*D,D*Math.tan(ridgeElev(L,a))),c0=toCam(cam3.ex+ca*D,cam3.ey+sa*D,0);
+      if(c1.z<NEAR||c0.z<NEAR)continue;top.push(proj(c1));bot.push(proj(c0));}
+    if(top.length<2)continue;
+    cx.fillStyle=col;cx.beginPath();cx.moveTo(top[0][0],top[0][1]);for(const q of top)cx.lineTo(q[0],q[1]);
+    for(let i=bot.length-1;i>=0;i--)cx.lineTo(bot[i][0],bot[i][1]+1*DPR);cx.closePath();cx.fill();
+    // snow on the far alpine peaks: above a snow line the upper part of each peak is white
+    if(l===0&&cfg.surface==='tarmac'){const snowLine=L.base*0.95*Math.PI/180;const snowCol=mixCol('#c9c4c2',sc.skyHor,0.38);
+      let run=[];const flush=()=>{if(run.length>1){cx.fillStyle=snowCol;cx.beginPath();run.forEach((q,k)=>k?cx.lineTo(q[0][0],q[0][1]):cx.moveTo(q[0][0],q[0][1]));for(let k=run.length-1;k>=0;k--)cx.lineTo(run[k][1][0],run[k][1][1]);cx.closePath();cx.fill();}run=[];};
+      for(let a=psi-1.3;a<=psi+1.3;a+=0.01){const e=ridgeElev(L,a);if(e<=snowLine){flush();continue;}const lo=snowLine+(e-snowLine)*0.45;const ca=Math.cos(a),sa=Math.sin(a);
+        const c1=toCam(cam3.ex+ca*D,cam3.ey+sa*D,D*Math.tan(e)),c2=toCam(cam3.ex+ca*D,cam3.ey+sa*D,D*Math.tan(lo));if(c1.z<NEAR||c2.z<NEAR){flush();continue;}run.push([proj(c1),proj(c2)]);}
+      flush();}}
+}
 function horizonLine(W){
   const psi=S.psi,D=60000,p=[];
   for(const a of [psi-1.25,psi+1.25]){
@@ -2183,8 +2300,9 @@ function horizonLine(W){
    binned by nearest track segment. That way a crest hides what lies behind
    it. Without a profile the order is the same as before. */
 function collectGroundMarks(W,H,bins,far){
-  const bands=[[1.6,2.0,26,0.050,'#5a5145'],[5.5,26,86,0.17,'rgba(75,67,56,0.72)'],
-               [20,86,320,0.60,'rgba(66,59,49,0.42)']];
+  const snowy=cfg.scenery&&cfg.surface==='snow';   // on snow the ground texture is packed snow and ice, not dirt
+  const bands=[[1.6,2.0,26,0.050,snowy?'#46505b':'#5a5145'],[5.5,26,86,0.17,snowy?'rgba(62,72,84,0.72)':'rgba(75,67,56,0.72)'],
+               [20,86,320,0.60,snowy?'rgba(72,82,94,0.42)':'rgba(66,59,49,0.42)']];
   const N=TRACK.N,w=trackWindow();
   for(let bi=0;bi<3;bi++){
     const g=bands[bi][0],r0=bands[bi][1],r1=bands[bi][2],sz=bands[bi][3],col=bands[bi][4];
@@ -2231,6 +2349,7 @@ function taper(p1,p2,w1,w2){
   cx.lineTo(p2[0]-nx*w2/2,p2[1]-ny*w2/2);cx.lineTo(p1[0]-nx*w1/2,p1[1]-ny*w1/2);cx.closePath();cx.fill();
 }
 function drawRoadPass(sur,W,H){
+  const SC=cfg.scenery?(SCENE[cfg.surface]||SCENE.gravel):null;
   const N=TRACK.N,w=trackWindow(),O=0.20,R=34;
   const bins=[],far=[];
   if(cfg.near)collectGroundMarks(W,H,bins,far);
@@ -2249,13 +2368,16 @@ function drawRoadPass(sur,W,H){
     // half-transparent, the overlaps would darken into dots.
     const R=roadState(), useLine=LINE&&R.band>0, ia=(S.idx+k+N*2)%N, ib=(S.idx+k+1+N*2)%N;
     const oa=useLine?LINE[ia].o:0, ob=useLine?LINE[ib].o:0;
-    cx.globalAlpha=R.rut>0?0.34:0.22;cx.fillStyle='#000';
+    // ruts: on snow the tracks are polished to ice – dark, wide and clearly visible; on gravel dark grooves; on tarmac faint rubber
+    const snowy=cfg.surface==='snow', rutA=R.rut>0?(snowy?0.55:0.34):0.22, rutW=snowy?0.55:0.35;
+    cx.globalAlpha=rutA;cx.fillStyle=snowy?'#1a2230':'#000';
     for(const side of [1,-1]){
       const offA=oa+side*RUT_HALF, offB=ob+side*RUT_HALF;
       const s2=clipSeg(toCam(a.x+a.nx*offA,a.y+a.ny*offA,a.z+a.bank*offA),toCam(b.x+b.nx*offB,b.y+b.ny*offB,b.z+b.bank*offB));
-      if(s2)taper(proj(s2[0]),proj(s2[1]),clamp(cam3.f*0.35/s2[0].z,0.6,10*DPR),clamp(cam3.f*0.35/s2[1].z,0.6,10*DPR));
+      if(s2)taper(proj(s2[0]),proj(s2[1]),clamp(cam3.f*rutW/s2[0].z,0.6,12*DPR),clamp(cam3.f*rutW/s2[1].z,0.6,12*DPR));
     }
     cx.globalAlpha=1;
+
     if(cfg.edges){cx.fillStyle=sur.edge3;
       for(const side of [1,-1]){
         const s2=clipSeg(toCam(ax+side*a.nx*a.w,ay+side*a.ny*a.w,a.z+side*a.bank*a.w),toCam(bx+side*b.nx*b.w,by+side*b.ny*b.w,b.z+side*b.bank*b.w));
@@ -2279,26 +2401,33 @@ function drawRoadPass(sur,W,H){
     const [a,b]=seg(k);
     // surfaces extended by O across segment boundaries, otherwise seams remain
     const ax=a.x-a.tx*O, ay=a.y-a.ty*O, bx=b.x+b.tx*O, by=b.y+b.ty*O;
+    const dSeg=Math.hypot(a.x-cam3.ex,a.y-cam3.ey);
     if(TRACK.hasZ){
       for(const side of [1,-1]){
         const P=[toCam(ax+side*a.nx*a.w,ay+side*a.ny*a.w,a.z+side*a.bank*a.w),
                  toCam(bx+side*b.nx*b.w,by+side*b.ny*b.w,b.z+side*b.bank*b.w),
                  toCam(bx+side*b.nx*R,by+side*b.ny*R,b.z+side*b.bank*(b.w+VERGE)),
                  toCam(ax+side*a.nx*R,ay+side*a.ny*R,a.z+side*a.bank*(a.w+VERGE))];
-        if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR))fillCam(P,'#161411');
+        if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR))fillCam(P,SC?hazed(SC.verge,SC,dSeg):'#161411');
       }
     }
     const P=[toCam(ax+a.nx*a.w,ay+a.ny*a.w,a.z+a.bank*a.w),
              toCam(bx+b.nx*b.w,by+b.ny*b.w,b.z+b.bank*b.w),
              toCam(bx-b.nx*b.w,by-b.ny*b.w,b.z-b.bank*b.w),
              toCam(ax-a.nx*a.w,ay-a.ny*a.w,a.z-a.bank*a.w)];
-    if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR))fillCam(P,sur.fill3);
+    if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR))fillCam(P,hazed(sur.fill3,SC,dSeg));
+    // snowbanks: ploughed snow along both edges, a low light wall that frames the road
+    if(SC&&SC.bank&&dSeg<260){for(const side of [1,-1]){const w0=0.35,w1=1.6,hb=0.45;
+      const B=[toCam(ax+side*a.nx*(a.w+w0),ay+side*a.ny*(a.w+w0),a.z+side*a.bank*(a.w+w0)),toCam(bx+side*b.nx*(b.w+w0),by+side*b.ny*(b.w+w0),b.z+side*b.bank*(b.w+w0)),
+               toCam(bx+side*b.nx*(b.w+w1),by+side*b.ny*(b.w+w1),b.z+side*b.bank*(b.w+w1)+hb),toCam(ax+side*a.nx*(a.w+w1),ay+side*a.ny*(a.w+w1),a.z+side*a.bank*(a.w+w1)+hb)];
+      if(!(B[0].z<NEAR&&B[1].z<NEAR&&B[2].z<NEAR&&B[3].z<NEAR))fillCam(B,hazed('#aab2bc',SC,dSeg));}}
     // swept band around the line
     if(LINE&&roadState().band>0){const bw=roadState().band,ia=(S.idx+k+N*2)%N,ib=(S.idx+k+1+N*2)%N,oa=LINE[ia].o,ob=LINE[ib].o;
       const Q=[toCam(ax+a.nx*(oa+bw),ay+a.ny*(oa+bw),a.z+a.bank*(oa+bw)),toCam(bx+b.nx*(ob+bw),by+b.ny*(ob+bw),b.z+b.bank*(ob+bw)),
                toCam(bx+b.nx*(ob-bw),by+b.ny*(ob-bw),b.z+b.bank*(ob-bw)),toCam(ax+a.nx*(oa-bw),ay+a.ny*(oa-bw),a.z+a.bank*(oa-bw))];
-      if(!(Q[0].z<NEAR&&Q[1].z<NEAR&&Q[2].z<NEAR&&Q[3].z<NEAR))fillCam(Q,cfg.surface==='tarmac'?'rgba(0,0,0,0.10)':'rgba(0,0,0,0.16)');}
+      if(!(Q[0].z<NEAR&&Q[1].z<NEAR&&Q[2].z<NEAR&&Q[3].z<NEAR))fillCam(Q,cfg.surface==='tarmac'?'rgba(0,0,0,0.10)':cfg.surface==='snow'?'rgba(30,42,58,0.28)':'rgba(0,0,0,0.16)');}
     drawMarkList(bins[k+w.back]);
+    drawVegAt(k,SC);
     if(k<w.ahead-1)deco(k+1);
   }
   deco(-w.back);
@@ -2398,13 +2527,63 @@ function drawRoadTexP(sur){
 }
 /* Vegetation: staggered beside the road as standing dark shapes – the
    parallax between near and far bushes carries the depth perception. */
+/* Vegetation is drawn in two places: what lies beyond the road window goes
+   before the road pass (it is far, and the terrain of nearer segments may
+   hide it behind a crest); what lies inside the window is drawn by the road
+   pass itself, right after the terrain and road of its own segment, far to
+   near. Drawing it all before the pass let the verge fill cover bushes as
+   they entered the window – they popped in and out while driving. */
+function vegWindow(){const N=TRACK.N,w=trackWindow();return {N,w,rel:i=>{let r=((i-S.idx)%N+N)%N;if(r>N/2)r-=N;return r;}};}
 function drawBushP(){
   const bush=TRACK.pts.bush;if(!bush)return;
+  const sc=cfg.scenery?(SCENE[cfg.surface]||SCENE.gravel):null, lim=sc?320:180;const V=vegWindow();
   cx.fillStyle='#1c1f18';cx.strokeStyle='#2d3126';cx.lineWidth=1*DPR;
-  for(const b of bush){const dx=b.x-cam3.ex,dy=b.y-cam3.ey;if(dx*dx+dy*dy>180*180)continue;if(dx*cam3.fx+dy*cam3.fy<0)continue;
-    const c0=toCam(b.x,b.y,b.z||0);if(c0.z<NEAR)continue;const c1=toCam(b.x,b.y,(b.z||0)+b.h);const a=proj(c0),t=proj(c1);
-    const rw=cam3.f*b.r/c0.z;if(rw<0.8)continue;
+  const vis=[];for(let n=0;n<bush.length;n++){const b=bush[n];const r=V.rel(b.i);if(r>=-V.w.back&&r<V.w.ahead)continue;   // in the window: the road pass draws it
+    const dx=b.x-cam3.ex,dy=b.y-cam3.ey,d2=dx*dx+dy*dy;if(d2>lim*lim)continue;if(dx*cam3.fx+dy*cam3.fy<0)continue;vis.push([d2,n]);}
+  vis.sort((p,q)=>q[0]-p[0]);
+  for(const [d2,n] of vis)drawVeg(bush[n],n,sc,Math.sqrt(d2));
+}
+function drawVegAt(k,sc){   // vegetation of the segment k of the window
+  const bush=TRACK.pts.bush;if(!bush)return;const V=vegWindow();
+  for(let n=0;n<bush.length;n++){const b=bush[n];if(V.rel(b.i)!==k)continue;const dx=b.x-cam3.ex,dy=b.y-cam3.ey;if(dx*cam3.fx+dy*cam3.fy<0)continue;drawVeg(b,n,sc,Math.hypot(dx,dy));}
+}
+function drawVeg(b,n,sc,d){
+  const c0=toCam(b.x,b.y,b.z||0);if(c0.z<NEAR)return;
+  const kind=sc?vegKind(sc,n):'bush', u=((n*40503>>>0)%1000)/1000;
+  if(kind==='bush'&&d>180)return;
+  if(kind==='conifer')drawConifer(b,c0,5+u*5,sc,d);
+  else if(kind==='decid')drawDecid(b,c0,4+u*4,sc,d);
+  else if(kind==='cypress')drawCypress(b,c0,7+u*5,sc,d);
+  else if(kind==='rock')drawRock(b,c0,0.5+u*1.1,sc,d,n);
+  else{const c1=toCam(b.x,b.y,(b.z||0)+b.h);const a=proj(c0),t=proj(c1);
+    const rw=cam3.f*b.r/c0.z;if(rw<0.8)return;
+    cx.fillStyle=sc?hazed(sc.bush,sc,d):'#1c1f18';cx.strokeStyle=sc?hazed('#2d3126',sc,d):'#2d3126';cx.lineWidth=1*DPR;
     cx.beginPath();cx.ellipse(a[0],(a[1]+t[1])/2,Math.min(rw,120*DPR),Math.max(1,Math.abs(a[1]-t[1])/2),0,0,7);cx.fill();cx.stroke();}
+}
+function vegKind(sc,i){const u=((i*2654435761>>>0)%1000)/1000;let acc=0;
+  for(const k of ['conifer','decid','cypress','rock']){acc+=sc.veg[k]||0;if(u<acc)return k;}return 'bush';}
+function topOf(b,h){return proj(toCam(b.x,b.y,(b.z||0)+h));}
+function drawConifer(b,c0,ht,sc,d){const a=proj(c0),t=topOf(b,ht),half=cam3.f*ht*0.34/c0.z;if(half<0.6)return;
+  const lvl=[[0.18,0.55,1],[0.42,0.77,0.74],[0.66,1,0.48]];
+  cx.fillStyle=hazed(sc.tree,sc,d);
+  for(const [lo,hi,wf] of lvl){const x0=a[0]+(t[0]-a[0])*lo,y0=a[1]+(t[1]-a[1])*lo,x1=a[0]+(t[0]-a[0])*hi,y1=a[1]+(t[1]-a[1])*hi,hw=half*wf;
+    cx.beginPath();cx.moveTo(x0-hw,y0);cx.lineTo(x0+hw,y0);cx.lineTo(x1,y1);cx.closePath();cx.fill();}
+  if(sc.snowCap){cx.fillStyle=hazed('#c8ced6',sc,d);   // snow lying on the upper side of each tier
+    for(const [lo,hi,wf] of lvl){const x1=a[0]+(t[0]-a[0])*hi,y1=a[1]+(t[1]-a[1])*hi,m=0.45,xm=a[0]+(t[0]-a[0])*(hi-(hi-lo)*m),ym=a[1]+(t[1]-a[1])*(hi-(hi-lo)*m),hw=half*wf*m;
+      cx.beginPath();cx.moveTo(xm-hw,ym);cx.lineTo(xm+hw,ym);cx.lineTo(x1,y1);cx.closePath();cx.fill();}}
+}
+function drawDecid(b,c0,ht,sc,d){const a=proj(c0),t=topOf(b,ht),m=topOf(b,ht*0.62),R=cam3.f*ht*0.30/c0.z;if(R<0.6)return;
+  cx.strokeStyle=hazed('#2a241d',sc,d);cx.lineWidth=Math.max(1,cam3.f*0.18/c0.z);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(m[0],m[1]);cx.stroke();
+  cx.fillStyle=hazed(sc.snowCap?'#3a3e40':sc.crown,sc,d);   // bare, frosted crowns in winter
+  const cxm=(m[0]+t[0])/2,cym=(m[1]+t[1])/2,ry=Math.max(1,Math.abs(t[1]-a[1])*0.30);
+  for(const [ox,oy,rx,rr] of [[-0.35,0.25,0.72,0.85],[0.35,0.15,0.72,0.9],[0,-0.35,0.7,0.8]]){cx.beginPath();cx.ellipse(cxm+R*ox,cym+ry*oy,R*rx,ry*rr,0,0,7);cx.fill();}
+}
+function drawCypress(b,c0,ht,sc,d){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.11/c0.z;if(R<0.5)return;
+  cx.fillStyle=hazed(sc.tree,sc,d);cx.beginPath();cx.ellipse((a[0]+t[0])/2,(a[1]+t[1])/2,R,Math.max(1,Math.abs(t[1]-a[1])/2),0,0,7);cx.fill();
+}
+function drawRock(b,c0,ht,sc,d,i){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*1.3/c0.z,H=Math.abs(t[1]-a[1]);if(R<0.6)return;
+  const j=((i*97)>>>0)%5;cx.fillStyle=hazed(sc.rock,sc,d);cx.beginPath();cx.moveTo(a[0]-R,a[1]);
+  cx.lineTo(a[0]-R*0.7,a[1]-H*(0.6+j*0.06));cx.lineTo(a[0]-R*0.1,a[1]-H);cx.lineTo(a[0]+R*0.5,a[1]-H*(0.75-j*0.05));cx.lineTo(a[0]+R,a[1]);cx.closePath();cx.fill();
 }
 function drawConesP(){
   for(const k of TRACK.cones){
@@ -2527,20 +2706,23 @@ function drawRefs(W,H){
 function drawPerspective(){
   const W=cv.width,H=cv.height;
   cx.setTransform(1,0,0,1,0,0);
-  cx.fillStyle='#08080a'; cx.fillRect(0,0,W,H);
+  const sc=cfg.scenery?(SCENE[cfg.surface]||SCENE.gravel):null;
+  cx.fillStyle=sc?sc.skyTop:'#08080a'; cx.fillRect(0,0,W,H);
   setupCam(W,H);
   const sur=SURF[cfg.surface];
 
   const hz=horizonLine(W);
   if(hz){
-    cx.fillStyle='#131210';
+    if(sc)drawSky(sc,hz,W,H);
+    cx.fillStyle=sc?groundFill(sc,hz,H):'#131210';
     cx.beginPath();cx.moveTo(hz[0][0],hz[0][1]);cx.lineTo(hz[1][0],hz[1][1]);
     cx.lineTo(hz[1][0],H*3);cx.lineTo(hz[0][0],H*3);cx.closePath();cx.fill();
+    if(sc)drawRidges(sc);
   }
   if(cfg.far){
     drawFarVerticals();
     drawBushP();
-    if(hz){cx.strokeStyle='#37312a';cx.lineWidth=1*DPR;
+    if(hz&&!sc){cx.strokeStyle='#37312a';cx.lineWidth=1*DPR;
       cx.beginPath();cx.moveTo(hz[0][0],hz[0][1]);cx.lineTo(hz[1][0],hz[1][1]);cx.stroke();}
   }
   drawRoadPass(sur,W,H);
@@ -2580,21 +2762,30 @@ function drawMap(){
 const tc=document.getElementById('tires').getContext('2d');
 const gc=document.getElementById('gg').getContext('2d');
 const ggBuf=[];
+/* Display damping. Gravel roughness makes wheel loads swing by hundreds of
+   newtons from frame to frame – physically right, and an unreadable gauge.
+   Every gauge that shows a fast physical quantity goes through a first-order
+   filter with about 100 ms time constant, like the needle of a real
+   instrument. The physics and the data logger are untouched; only what the
+   eye is shown is damped. */
+const DISP={};
+function dsp(key,val,tau){const dt=1/60,k=tau?1-Math.exp(-dt/tau):1;const p=DISP[key];const o=(p===undefined||!isFinite(p))?val:p+(val-p)*k;DISP[key]=o;return o;}
 function drawInstruments(){
   // tyre matrix
   tc.clearRect(0,0,150,112); tc.fillStyle='#000';tc.fillRect(0,0,150,112);
   const pos=[[38,32],[112,32],[38,84],[112,84]];
   for(let i=0;i<4;i++){
     const[px,py]=pos[i], R=24;
-    const use=clamp(S.slip[i],0,1.5);
+    const use=clamp(dsp('use'+i,S.slip[i],0.10),0,1.5);
     const col=use<0.85?'#6fd3e0':use<1.02?'#ffb300':'#ff3b1f';
     tc.strokeStyle='#2a2620';tc.lineWidth=1;
     tc.beginPath();tc.arc(px,py,R,0,7);tc.stroke();
     // wheel load as a filled disc
-    tc.fillStyle='rgba(217,205,184,'+clamp(S.Fz[i]/6000,0,0.5)+')';
-    tc.beginPath();tc.arc(px,py,R*clamp(S.Fz[i]/5200,0.05,1),0,7);tc.fill();
+    const Fzd=dsp('Fz'+i,S.Fz[i],0.12);
+    tc.fillStyle='rgba(217,205,184,'+clamp(Fzd/6000,0,0.5)+')';
+    tc.beginPath();tc.arc(px,py,R*clamp(Fzd/5200,0.05,1),0,7);tc.fill();
     // slip vector
-    const sx=clamp(S.kappa[i]/0.35,-1.4,1.4), sy=clamp(-Math.tan(S.alpha[i])/0.55,-1.4,1.4);
+    const sx=clamp(dsp('k'+i,S.kappa[i],0.08)/0.35,-1.4,1.4), sy=clamp(-Math.tan(dsp('a'+i,S.alpha[i],0.08))/0.55,-1.4,1.4);
     tc.strokeStyle=col;tc.lineWidth=2;
     tc.beginPath();tc.moveTo(px,py);tc.lineTo(px+sy*R,py-sx*R);tc.stroke();
     tc.fillStyle='#6e675b';tc.font='8px ui-monospace,monospace';
@@ -2644,8 +2835,8 @@ function updateHud(){
   const hw=sd*CAR.ratio;                       // steering-wheel angle
   const hwr=Math.round(Math.abs(hw));
   $('tSteer').textContent=hwr===0?'0°':(hw>0?'L ':'R ')+hwr+'°';
-  const tq=S.Tw||0, tqn=clamp(tq/9,-1,1);
-  const sf=Math.max(S.slip[0],S.slip[1]);      // front axle
+  const tq=dsp('tq',S.Tw||0,0.10), tqn=clamp(tq/9,-1,1);
+  const sf=dsp('sf',Math.max(S.slip[0],S.slip[1]),0.10);      // front axle
   const bt=$('bTq');
   bt.style.width=(Math.abs(tqn)*46)+'%';
   bt.style.left=tqn<0?'calc(50% - '+(Math.abs(tqn)*46)+'%)':'50%';
@@ -2656,12 +2847,12 @@ function updateHud(){
   const be=$('beta'); be.textContent=beta.toFixed(0)+'°';
   be.className='data '+(Math.abs(beta)>26?'over':Math.abs(beta)>13?'warn':'');
   $('yaw').textContent=(S.r*DEG).toFixed(0);
-  $('gtot').textContent=(Math.hypot(S.ax,S.ay)/9.81).toFixed(2);
-  const gmax=Math.max(axleUse(0),axleUse(1));    // load-weighted per axle
+  $('gtot').textContent=(dsp('gtot',Math.hypot(S.ax,S.ay),0.12)/9.81).toFixed(2);
+  const gmax=dsp('gmax',Math.max(axleUse(0),axleUse(1)),0.12);    // load-weighted per axle
   const ge=$('grip'); ge.textContent=Math.round(clamp(gmax,0,2)*100)+'%';
   ge.className='data '+(gmax>1.02?'over':gmax>0.85?'warn':'');
   $('grade').textContent=(S.slopeX*100).toFixed(0)+' %'+(TRACK.hasZ?' · '+S.zRoad.toFixed(0)+' m':'');
-  const ga=$('gapp');ga.textContent=(S.gApp/9.81).toFixed(2);ga.className='data '+(S.gApp<6.5?'over':S.gApp<8.3?'warn':'');
+  const ga=$('gapp');ga.textContent=(dsp('gapp',S.gApp,0.15)/9.81).toFixed(2);ga.className='data '+(S.gApp<6.5?'over':S.gApp<8.3?'warn':'');
   $('curlap').textContent=fmt(lap.t);
   $('lastlap').textContent=fmt(lap.last);
   $('bestlap').textContent=fmt(lap.best);
@@ -2682,7 +2873,12 @@ function seg(id,fn){
   });
 }
 function exclusive(b,root){[...root.children].forEach(c=>c.classList.remove('on'));b.classList.add('on');}
-seg('segSurf',(v,b,r)=>{exclusive(b,r);cfg.surface=v;ggBuf.length=0;});
+/* The surface decides the setup: choosing a surface loads its template, and
+   the drivetrain's rear-axle values on top – a car is set up for the stage it
+   runs. Anyone who wants a gravel setup on tarmac picks the template after. */
+seg('segSurf',(v,b,r)=>{exclusive(b,r);cfg.surface=v;ggBuf.length=0;
+  const tpl=v==='tarmac'?'Tarmac':v==='snow'?'Snow':'Gravel';applySetupTemplate(tpl);if(cfg.drive==='rwd')applyDriveSetup('rwd');syncSetupUI();
+  const st=document.getElementById('segTpl');if(st)[...st.children].forEach(c=>c.classList.toggle('on',c.dataset.v===tpl));});
 seg('segDrive',(v,b,r)=>{exclusive(b,r);cfg.drive=v;applyDriveSetup(v);syncDriveSliders();});
 seg('segTpl',(v,b,r)=>{exclusive(b,r);applySetupTemplate(v);
   const sd=document.getElementById('segDrive');if(sd)[...sd.children].forEach(c=>c.classList.toggle('on',c.dataset.v===cfg.drive));});
@@ -3336,6 +3532,7 @@ function setupMobile(){
   bind('tbHb',()=>touchHb=true,()=>touchHb=false);
   bind('tbUp',()=>shift(1));bind('tbDown',()=>shift(-1));
   bind('tbBack',()=>backOnTrack());
+  bind('tbTut',()=>{cfg.tutor=!cfg.tutor;const b=document.querySelector('#segViz [data-v=tutor]');if(b)b.classList.toggle('on',cfg.tutor);document.getElementById('tbTut').classList.toggle('hold',cfg.tutor);});
   bind('tbView',()=>{const ev=new KeyboardEvent('keydown',{key:'c'});dispatchEvent(ev);});
   document.addEventListener('touchmove',e=>{if(e.target===cv)e.preventDefault();},{passive:false});
 }

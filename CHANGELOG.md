@@ -2,6 +2,15 @@
 
 The simulation was developed iteratively; each step below was measured against the test harness before it was kept.
 
+## 1.3.0
+
+- Scenery for the driver view (Optical flow → Scenery): dusk sky gradient and low sun per surface, three ridge layers at infinity (pure rotational flow), aerial haze on road and verge, ground gradient. Landscape per surface: tarmac with snow-capped jagged peaks, cypresses, broad-leaved trees and rock outcrops; gravel with rolling hills, pine, birch and boulders; snow with low hills, snow-laden spruce, snowbanks along the road, a snow-covered road surface with dark polished ruts and snow-coloured ground texture. Vegetation inside the road window is drawn by the road pass itself, far to near, so it no longer pops in and out behind the verge fill. The snowbanks are visual only (see `TODO.md`).
+- Tutor overlay (`U`, touch button, Overlays → Tutor): only while the car is becoming unstable (excess yaw rate r − ay/v beyond 9 °/s with the rear axle past its peak, hysteresis out at 3 °/s) it shows the correction on the steering ribbon – a green band from the current wheel position to the target – and one word (counter-steer, lift · counter-steer, unwind). Filtered against road roughness; silent otherwise; display only.
+- Default surface is gravel, matching the base setup; changing the surface loads its template (Gravel / Tarmac / new Snow), with the RWD values on top when rear-wheel drive is selected.
+- Gauges are damped for the eye (≈100 ms first-order), so wheel loads, usage, hand torque and g readings stop flickering on rough gravel; physics and logger untouched. Cross stripes removed from the driver view again.
+- New scenario script `flutter.js`; the harness exports `tutorAdvice`.
+- README: driver views re-rendered with the scenery, a snow view added.
+
 ## 1.2.0
 
 - Mobile steering: a horizontal slider at the bottom right is now the default, absolute like the mouse (centre is straight ahead, the ends are full lock); the thumb-crank wheel stays available (setup: Touch steering). The first device test found the crank impractical.

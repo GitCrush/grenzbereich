@@ -43,6 +43,10 @@ Map a clutch pedal axis (gamepad/wheel) and bypass the launch and stall-protecti
 
 First device test done (thumb crank impractical → slider added and made the default; pedal travel capped by the available room; overlays scroll). Still to check on a phone: slider track length and knob size, whether pointer capture survives the thumb leaving the canvas on iOS Safari, handbrake button versus the pedal zone, portrait layout.
 
+## 10. Snowbanks as physics
+
+The snowbanks on snow are visual only. On Swedish stages drivers lean on them in corners; as a physical element they would be a soft wall beside the road: lateral force growing with penetration, high damping, some drag, maybe losing height where hit (links to the dynamic road state, item 2). Until then the visual bank promises a support the car does not get.
+
 ## Minor
 
 - Reverse gear: 57 km/h after 4 s at half throttle; check the ratio.
