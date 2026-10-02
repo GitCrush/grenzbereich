@@ -11,7 +11,7 @@ The physics of `../index.html` runs here without a browser: the script block is 
 
 ```
 python3 extract.py            # writes engine.js from ../index.html (or pass a path)
-node consistency.js           # scenario matrix, ≈ 108 scenarios, 2–3 min
+node consistency.js           # scenario matrix, ≈ 114 scenarios, 2–3 min
 node bench.js                 # reference figures: 0–100, braking, skidpad, step steer, wheel dynamics
 ```
 

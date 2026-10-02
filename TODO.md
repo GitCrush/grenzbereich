@@ -15,7 +15,9 @@ Each pass should sweep the line and deepen the ruts, instead of the static band 
 - Setup: "road state: fresh / driven line / dynamic". Reset with the track.
 - Rendering: band and ruts from the grid in both views.
 
-## 3. Phantom driver for two-wheel drive
+## 3. Phantom driver for two-wheel drive and for the Stage
+
+On the Stage the phantom runs off at s≈450 and in the hairpin region (s≈1150–1200) even on the flat layout, 2–3 s per lap on gravel, 7 s with the profile. The circuit is clean. Needs a look at the look-ahead and the lateral gains for the tighter line there.
 
 The phantom (`ghostAI`) is tuned for all-wheel drive. As FWD and RWD on gravel it runs off track for 4–5 s per lap (matrix findings). Needs drive-specific throttle metering on corner exit, earlier lift for FWD understeer, counter-steer gain and throttle recovery for RWD oversteer.
 
