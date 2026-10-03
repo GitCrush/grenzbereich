@@ -1,6 +1,6 @@
 # Grenzbereich — Rally Vehicle Dynamics
 
-A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no dependencies, no assets: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
+A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no build step, no assets – the 3D landscape loads one library, three.js r128, from cdnjs; without it, or without WebGL, the built-in 2D renderer draws the driver view: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
 
 Every mechanism in the physics is written down in the code and measured against standard manoeuvres. A phantom car drives the same physics on the ideal line, a data logger names the cause of every spin, and a headless test harness runs 100+ scenarios against plausibility rules.
 
@@ -8,11 +8,11 @@ Every mechanism in the physics is written down in the code and measured against 
 
 The simulator is the single file [`index.html`](index.html) in this repository, served by GitHub Pages at [gitcrush.github.io/grenzbereich/index.html](https://gitcrush.github.io/grenzbereich/index.html). Nothing to install: open that address, or download the file and open it locally.
 
-![Driver view on gravel: northern forest in daylight](docs/screenshots/driver-view-gravel.png)
+![Driver view in a browser: the 3D landscape on gravel, tarmac and snow](docs/screenshots/driver-view-3d.png)
 
-| Banked tarmac corner near the limit | Snow: winter forest, snowbanks along the road |
+| Low sun on gravel and snow (3D) | 2D renderer, used without WebGL: banked tarmac near the limit |
 |---|---|
-| ![](docs/screenshots/driver-view-banked-tarmac.png) | ![](docs/screenshots/driver-view-snow.png) |
+| ![](docs/screenshots/driver-view-sun.png) | ![](docs/screenshots/driver-view-banked-tarmac.png) |
 
 ![Top view with the full interface: tyre forces, dust, skid marks, phantom and elevation profile](docs/screenshots/top-view-gravel.png)
 
@@ -22,10 +22,10 @@ The interesting part of driving a rally car happens in the last ten percent of g
 
 - **Tyre usage per axle** in the HUD, load-weighted, colour-coded from the torque peak to the grip limit.
 - **A phantom** that drives the same car on the ideal line with a consistent driver model, so you can see where it brakes and how much it slides.
-- **A tutor** (`U`): it stabilises the car on the path you have chosen – it does not care about the ideal line, the radius or the drift angle. While a slide is growing, a green band on the steering band at the top of the screen shows the counter-steer (front wheels along their own direction of travel, corrected against the yaw the car cannot sustain); as the slide shrinks it shows how far to unwind; in a settled drift it is quiet. It reads the state only; it never touches the input.
+- **A tutor** (`U`): one recommendation for the steering wheel, on the band at the top of the screen, that keeps the car stable *and* on the road – on the line you are driving, not the ideal line. It continues your offset and the way you are moving across the road, aims a look-ahead down the road, and gives the wheel angle for that: in grip from the car's own steady-state behaviour (learned while you drive), in a slide from the front axle's direction of travel against the yaw the car cannot sustain. Quiet while the car is settled; shows bends ahead, the road edge, and slides (counter-steer, unwind). It never touches the input.
 - **A data logger** (14-second ring buffer) with an incident detector that freezes the window around a breakaway and names the probable cause — lift-off, locked wheels, power-on, entry speed.
 - **Exercises**: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
-- **Instrumented views**: a top view whose zoom covers your braking distance, and a driver view with a horizon-locked camera – the horizon holds, the bonnet tilts with the car, so climbs, crests and bankings read as such – built as a flow field (near-field texture, guide posts, road edge, vehicle axis vs. velocity vanishing point — the horizontal distance between the two *is* the slip angle), set in a scenery per surface – daylight by default, dusk as an option: sky gradient with clouds, a low sun and distant ridges at infinity that move only with yaw, aerial haze over road and ground, meadows and fields beside the road, barns, a forest treeline on the horizon. Each surface has its own country – tarmac a southern mountain road (snow-capped jagged ranges, cypresses, broad-leaved trees, rock outcrops, clear air), gravel a northern forest (rolling hills, pine and birch, boulders, dusty haze), snow a winter forest (low rounded hills, dense spruce with snow on the branches, snowbanks lining the road). Three graphics modes (`I`): day, dusk, and simple – the bare channel view the driver view started as.
+- **Instrumented views**: a top view whose zoom covers your braking distance, and a driver view with a horizon-locked camera – the horizon holds, the bonnet tilts with the car, so climbs, crests and bankings read as such – built as a flow field (near-field texture, guide posts, road edge, vehicle axis vs. velocity vanishing point — the horizontal distance between the two *is* the slip angle), set in a scenery per surface – natural daylight by default (muted palette, strong aerial perspective, high cloud), dusk as an option. The landscape is a 3D scene in WebGL (three.js): a terrain mesh from a height field, the road as a ribbon mesh on it, instanced low-poly trees and posts, sky dome, distant mountains and distance fog, with a depth buffer – stable from every angle. Without WebGL the 2D renderer is used. Elements: distant ridges at infinity that move only with yaw, aerial haze over road and ground, meadows and fields beside the road. Each surface has its own country – tarmac a southern mountain road (snow-capped jagged ranges, cypresses, broad-leaved trees, rock outcrops, clear air), gravel a northern forest (rolling hills, pine and birch, boulders, dusty haze), snow a winter forest (low rounded hills, dense spruce with snow on the branches, snowbanks lining the road). Three graphics modes (`I`): day, dusk, and simple – the bare channel view the driver view started as.
 
 ## Physics model
 
@@ -69,7 +69,7 @@ Every merged change must keep `test/consistency.js` clean: 114 scenarios across 
 | Handbrake | Space | | A |
 | Gears | E / Q | | bumpers |
 
-`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `I` graphics · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
+`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `I` graphics · `J` render debug · `F1` key list · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
 
 On phones and tablets (landscape): swipe up on the left half for throttle and down for brake – the travel from where the thumb landed sets the pedal, and full pedal is always within reach – and steer with the thumb on the horizontal slider at the bottom right, absolute like the mouse; it stays where you leave it (or returns to centre, see setup). A thumb-crank wheel is available as an alternative. Handbrake bottom left, gears and view top right. Tilt steering remains available as an option. Logitech wheels get constant-force feedback through WebHID in Chromium browsers.
 
@@ -98,7 +98,7 @@ node consistency.js         # the scenario matrix, 2–3 minutes
 node bench.js               # the reference figures
 ```
 
-With `@napi-rs/canvas` and `node-web-audio-api` installed, `shot.js` renders the driver view without a browser and `soundtest.js` renders sound demos as WAV — useful for reviewing changes. The driver views in this README are such renders; the top view comes from `uishot.js`, which drives the page in a headless Chromium through Playwright, with the phantom's driver model at the wheel and the full interface around it.
+With `@napi-rs/canvas` and `node-web-audio-api` installed, `shot.js` renders the driver view without a browser and `soundtest.js` renders sound demos as WAV — useful for reviewing changes. The 2D driver views are such renders; the 3D views come from a headless Chromium (`test/browser/`), and the top view from `uishot.js`, which drives the page in a headless Chromium through Playwright, with the phantom's driver model at the wheel and the full interface around it.
 
 ## Contributing
 

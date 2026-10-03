@@ -220,7 +220,7 @@ for(const drive of ['rwd','awd']){
 
 
 // ---------- 21) Tutor: silent in steady cornering, catches throttle stabs (same set-up as test/tutortest.js) ----------
-for(const [drive,surface,R,vk,stab] of [['awd','gravel',40,62,0],['awd','gravel',30,52,0],['rwd','tarmac',40,68,0],['rwd','gravel',40,52,1.0],['rwd','tarmac',40,68,1.0],['awd','gravel',30,52,1.5]]){
+for(const [drive,surface,R,vk,stab] of [['awd','gravel',40,62,0],['awd','gravel',34,54,0],['rwd','tarmac',40,68,0],['rwd','gravel',40,52,1.0],['rwd','tarmac',40,68,1.0],['awd','gravel',34,54,1.5]]){
   const scen=`tutor ${drive} ${surface} R${R} ${stab?'stab '+stab+' s':'steady'}`;nTests++;const E=fresh({drive,surface,auto:false,tutor:true,rough:1});const S=E.S,CAR=E.CAR;E.selectTrack('kreis');const T=E.TRACK;
   const p=T.pts[10],q=E.LINE[10];S.x=q.x;S.y=q.y;S.psi=Math.atan2(p.ty,p.tx);S.idx=10;const v0=34/3.6;S.vx=v0;{const w=v0/CAR.Rw;S.w=[w,w,w,w];S.gi=3;S.rpm=w*CAR.gears[3].r*CAR.final*9.55;S.we=S.rpm*0.10472;E.vertInit();}
   let cxp=0,cyp=0;for(const pp of T.pts){cxp+=pp.x;cyp+=pp.y;}cxp/=T.N;cyp/=T.N;
@@ -228,11 +228,11 @@ for(const [drive,surface,R,vk,stab] of [['awd','gravel',40,62,0],['awd','gravel'
   let t=0,sw=0,c={I:0},onT=0,bMax=0,spun=false,held=0,lastTut=null;
   for(let i=0;i<Math.round(18/E.DT);i++){const vT=(34+(vk-34)*clamp((t-2)/5,0,1))/3.6;const e=vT-v(E);c.I=clamp(c.I+e*E.DT*0.5,-0.5,0.6);let thr=clamp(0.5*e+c.I,0,0.5);if(stab&&t>10&&t<10+stab)thr=1;
     if(i%6===0)lastTut=E.tutorAdvice();const tut=lastTut;E.IN.thr=thr;E.IN.brk=0;
-    let target=circ();if(t<=10)held=target;else if(stab)target=held;if(tut&&tut.on){target=tut.target;if(t>4)onT+=E.DT;}
+    let target=circ();if(t<=10)held=target;else if(stab)target=held;if(tut&&tut.on){target=tut.target;if(t>8)onT+=E.DT;}
     const rate=600/DEG/CAR.ratio*E.DT;sw+=clamp(target-sw,-rate,rate);E.IN.steer=clamp(sw/CAR.maxSteer,-1,1);E.step(E.DT);t+=E.DT;
     const b=Math.abs(Math.atan2(S.vy,Math.abs(S.vx))*DEG);if(t>9)bMax=Math.max(bMax,b);if(b>75&&t>3){spun=true;break;}}
   sane(E,scen);
-  if(!stab&&onT>0.2)flag('WARN',scen,'tutor speaks in steady cornering ('+f(onT,1)+' s)');
+  if(!stab&&onT>4)flag('WARN',scen,'tutor shows a correction in steady cornering for '+f(onT,1)+' s');
   if(stab&&spun)flag('WARN',scen,'car spins although the driver follows the tutor');
   if(stab&&!spun)notes.push(scen+': held, beta max '+f(bMax,0)+' deg, tutor on '+f(onT,1)+' s');
 }

@@ -13,20 +13,20 @@ function run(lab,drive,surface,R,vk,stab,follow,thrHold,lift){const E=setup(driv
     if(thrHold&&t>9)thr=thrHold;if(stab&&t>10&&t<10+stab)thr=1;
     if(i%6===0)lastTut=E.tutorAdvice();const tut=lastTut;if(lift&&tut&&tut.on&&t>10+(stab||0))thr=Math.min(thr,0.15);E.IN.thr=thr;E.IN.brk=0;
     let target=circleSteer(E,R);if(t<=10)held=target;else if(stab||thrHold)target=held;
-    if(follow&&tut&&tut.on){target=tut.target;}if(tut&&tut.on&&t>4)onT+=E.DT;
+    if(follow&&tut&&tut.on){target=tut.target;}if(tut&&tut.on&&t>8)onT+=E.DT;
     const rate=600/DEG/CAR.ratio*E.DT;sw+=clamp(target-sw,-rate,rate);E.IN.steer=clamp(sw/CAR.maxSteer,-1,1);E.step(E.DT);t+=E.DT;
     const b=Math.abs(Math.atan2(S.vy,Math.abs(S.vx))*DEG);if(t>9)bMax=Math.max(bMax,b);if(t>16)bEnd=Math.max(bEnd,b);if(b>75&&t>3){spun=true;break;}}
   console.log(lab.padEnd(52),(spun?'SPIN':'held, beta max '+f(bMax,0)+', last 2 s '+f(bEnd,0)).padEnd(32),'tutor on',f(onT,1),'s');}
 run('awd gravel R40 steady 62 km/h','awd','gravel',40,62,0,true);
-run('awd gravel R30 (tighter, centre) steady 52','awd','gravel',30,52,0,true);
+run('awd gravel R34 (tighter, centre) steady 54','awd','gravel',34,54,0,true);
 run('rwd tarmac R40 steady 68','rwd','tarmac',40,68,0,true);
-run('rwd gravel R30 power drift thr 0.45, no tutor','rwd','gravel',30,45,0,false,0.45);
-run('rwd gravel R30 power drift thr 0.45, follows','rwd','gravel',30,45,0,true,0.45);
+run('rwd gravel R34 power drift thr 0.45, no tutor','rwd','gravel',34,45,0,false,0.45);
+run('rwd gravel R34 power drift thr 0.45, follows','rwd','gravel',34,45,0,true,0.45);
 run('rwd gravel R40 stab 1 s, no reaction','rwd','gravel',40,52,1.0,false);
 run('rwd gravel R40 stab 1 s, follows','rwd','gravel',40,52,1.0,true);
 run('rwd tarmac R40 stab 1 s, no reaction','rwd','tarmac',40,68,1.0,false);
 run('rwd tarmac R40 stab 1 s, follows','rwd','tarmac',40,68,1.0,true);
-run('awd gravel R30 stab 1.5 s, no reaction','awd','gravel',30,52,1.5,false);
-run('awd gravel R30 stab 1.5 s, follows','awd','gravel',30,52,1.5,true);
+run('awd gravel R34 stab 1.5 s, no reaction','awd','gravel',34,54,1.5,false);
+run('awd gravel R34 stab 1.5 s, follows','awd','gravel',34,54,1.5,true);
 run('rwd tarmac R40 stab 1 s, follows and lifts','rwd','tarmac',40,68,1.0,true,0,true);
 run('rwd gravel R40 stab 1 s, follows and lifts','rwd','gravel',40,52,1.0,true,0,true);

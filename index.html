@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <title>GRENZBEREICH — Rally Vehicle Dynamics</title>
+<!-- three.js for the landscape (WebGL, depth buffer, fog); without it the 2D renderer is used -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root{
   --void:#0d0c0a;
@@ -30,7 +32,8 @@ body{
 .data{font-family:ui-monospace,SFMono-Regular,"Roboto Mono",Menlo,monospace}
 
 #stage{position:relative;flex:1;min-width:0}
-canvas#world{display:block;width:100%;height:100%}
+canvas#world{display:block;width:100%;height:100%;position:relative;z-index:1}
+canvas#world3d{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;display:none}
 
 /* ---- Side panel ---- */
 #hud{
@@ -118,10 +121,14 @@ input[type=range]::-moz-range-thumb{width:11px;height:11px;background:var(--ambe
 .seg button.on{background:var(--amber);color:#111;border-color:var(--amber)}
 .seg button:focus-visible{outline:2px solid var(--ice);outline-offset:1px}
 
-#keys{
-  position:absolute;left:14px;bottom:12px;font-size:10px;letter-spacing:.09em;
-  color:var(--mute);line-height:1.65;pointer-events:none;
-}
+#keys{position:absolute;left:12px;bottom:12px;z-index:25;font-size:10px;line-height:1.7;letter-spacing:.04em;color:var(--mute);
+  background:rgba(13,12,10,.82);border:1px solid #2a2620;border-radius:3px;padding:8px 12px;max-width:min(560px,calc(100vw - 24px));display:none}
+#keys.on{display:block}
+#keysBtn{position:absolute;left:12px;bottom:12px;z-index:26;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--mute);background:rgba(13,12,10,.6);border:1px solid #2a2620;border-radius:3px;padding:4px 9px;cursor:pointer}
+#keysBtn:hover{color:var(--ink)}
+#keys.on+#keysBtn{bottom:auto;display:none}
+body.mobile #keysBtn{display:none}
 #keys b{color:var(--ink);font-weight:400}
 #flash{
   position:absolute;left:50%;top:34%;transform:translateX(-50%);
@@ -133,7 +140,7 @@ input[type=range]::-moz-range-thumb{width:11px;height:11px;background:var(--ambe
   #stage{flex:0 0 60vh;height:60vh;min-height:0}
   #hud{position:static;width:100%;flex:1 1 auto;height:auto;min-height:0;
        border-left:0;border-top:1px solid #26221d}
-  #keys{font-size:9px;bottom:6px}
+  #keys{font-size:9px}
 }
 #hud.off{display:none}
 html,body{touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -213,6 +220,7 @@ body.mobile #tiltHint.on{display:block}
 <body>
 
 <div id="stage">
+  <canvas id="world3d"></canvas>
   <canvas id="world"></canvas>
   <div id="flash"></div>
   <div id="tiltHint">Left: swipe up = throttle, down = brake · Right: slide left/right to steer</div>
@@ -237,9 +245,11 @@ body.mobile #tiltHint.on{display:block}
   <div id="hbBtn"><button id="tbHb"><b>HB</b>Handbrake</button></div>
   <div id="keys">
     <b>← →</b> steer &nbsp; <b>↑</b> throttle &nbsp; <b>↓</b> brake &nbsp; <b>Space</b> handbrake &nbsp; <b>Shift</b> clutch<br>
-    <b>LMB</b> clutch &nbsp; <b>RMB</b> brake &nbsp; <b>C</b> view &nbsp; <b>H</b> telemetry &nbsp; <b>E / Q</b> gear &nbsp; <b>Z</b> replay &nbsp; <b>T</b> track &nbsp; <b>P</b> excerpt &nbsp; <b>L</b> data logger (CSV) &nbsp; <b>G</b> ghost &nbsp; <b>M</b> sound &nbsp; <b>B</b> back on track &nbsp; <b>R</b> restart &nbsp; <b>O</b> setup &nbsp; <b>U</b> tutor &nbsp; <b>I</b> graphics &nbsp; <b>+ −</b> zoom<br>
-    <span id="padNote"><b>Gamepad</b> is detected automatically (analogue steering recommended)</span>
+    <b>LMB</b> clutch &nbsp; <b>RMB</b> brake &nbsp; <b>C</b> view &nbsp; <b>H</b> telemetry &nbsp; <b>E / Q</b> gear &nbsp; <b>Z</b> replay &nbsp; <b>T</b> track &nbsp; <b>P</b> excerpt &nbsp; <b>L</b> data logger (CSV) &nbsp; <b>G</b> ghost &nbsp; <b>M</b> sound &nbsp; <b>B</b> back on track &nbsp; <b>R</b> restart &nbsp; <b>O</b> setup &nbsp; <b>U</b> tutor &nbsp; <b>I</b> graphics &nbsp; <b>J</b> render debug &nbsp; <b>+ −</b> zoom<br>
+    <span id="padNote"><b>Gamepad</b> is detected automatically (analogue steering recommended)</span><br>
+    <span style="opacity:.7">F1 or ? closes this list</span>
   </div>
+  <button id="keysBtn" title="Keys (F1)">? keys</button>
 
   <div id="setup">
     <h2>Setup</h2>
@@ -339,6 +349,10 @@ body.mobile #tiltHint.on{display:block}
       <input type="range" id="rEye" min="60" max="600" value="200"></div>
     <div class="set"><label>Field of view <b><span id="vFov">76</span>°</b></label>
       <input type="range" id="rFov" min="45" max="115" value="76"></div>
+    <div class="set"><label>Light shafts (3D)</label>
+      <div class="seg" id="segRays"><button data-v="1" class="on">on</button><button data-v="0">off</button></div></div>
+    <div class="set"><label>Graphics detail</label>
+      <div class="seg" id="segDetail"><button data-v="auto" class="on">auto</button><button data-v="high">high</button><button data-v="low">low</button></div></div>
     <div class="set"><label>Camera</label>
       <div class="seg" id="segHlock"><button data-v="1" class="on">horizon-locked</button><button data-v="0">car-fixed</button></div></div>
     <div class="set"><label>Top-view camera</label>
@@ -530,7 +544,7 @@ const WHEELS=[
 const cfg={surface:'gravel',drive:'awd',auto:true,split:0.50,lsd:0.40,lsdCoast:0.25,profile:true,driven:true,
            bias:0.76,roll:0.43,rollGrad:3.2,bal:0,clock:1.0,camber:-2.5,abs:false,tc:false,ret:false,
            forces:false,trace:true,
-           view:'persp',near:true,far:true,posts:true,edges:true,scenery:true,daylight:true,gfx:'day',tutor:false,horizonLock:true,
+           view:'persp',near:true,far:true,posts:true,edges:true,scenery:true,daylight:true,gfx:'day',tutor:false,horizonLock:true,sunRays:true,
            axis:true,vp:true,bodymo:true,steer:'direct',steerHud:true,mouse:true,uniform:true,antilag:true,sound:true,camPath:true};
 
 let S={ // State
@@ -637,9 +651,11 @@ function buildTrack(def){
     // density along the stage: slow waves give open stretches and dense forest, two rows deep where it is dense
     const dens=0.05+0.30*clamp(0.5+0.55*Math.sin(p.s*0.019+1.1)*Math.sin(p.s*0.0057+0.4)+0.25*Math.sin(p.s*0.043),0,1);
     for(let row=0;row<2;row++){if(h2(i,7+row*20,15+row*20)<(row?dens*0.8:dens)){const side=h2(i,8+row*20,16+row*20)<0.5?1:-1,d=p.w+2+h2(i,9+row*20,17+row*20)*7+row*7;
-      bush.push({x:p.x+side*p.nx*d,y:p.y+side*p.ny*d,h:0.4+h2(i,10+row*20,18+row*20)*0.9,r:0.5+h2(i,11+row*20,19+row*20)*0.9,i,k:i*7+row*131});}}}
+      bush.push({x:p.x+side*p.nx*d,y:p.y+side*p.ny*d,h:0.4+h2(i,10+row*20,18+row*20)*0.9,r:0.5+h2(i,11+row*20,19+row*20)*0.9,i,k:i*7+row*131,side,off:d});}}}
   for(const b of bush)b.z=zOf(b.x,b.y);
   pts.bush=bush;
+  for(let i=0;i<N;i++)pts[i].i0=i;
+  pts.vegAt=new Array(N);for(let n=0;n<bush.length;n++){const i=bush[n].i;(pts.vegAt[i]||(pts.vegAt[i]=[])).push(n);}   // vegetation per track point, so a segment finds its own without scanning all
   return {pts,N,len,cones,apex,brk,ex:def.ex,name:def.name,line:def.line||'band',ghostLat:def.ghostLat||null,hasZ:!!useProf,zMin,zMax};
 }
 /* ═══════════ Road state: the driven line ═══════════
@@ -738,11 +754,182 @@ function trackZ(x,y,hint){
   const ds=(x-p.x)*p.tx+(y-p.y)*p.ty, n=(x-p.x)*p.nx+(y-p.y)*p.ny;
   return p.z+p.gz*ds+p.bank*clamp(n,-(p.w+VERGE),p.w+VERGE);
 }
+/* Nearest track point for an arbitrary ground position. A linear search over
+   ±170 points for every ground mark cost a third of the frame; a grid of
+   40 m cells built once per track answers it from the 3×3 cells around the
+   point. Positions farther than a cell from any track point fall back to the
+   windowed search. */
+const gKey=(a,b)=>(a+32768)*65536+(b+32768);   // numeric cell key: no string building per lookup
+function trackGrid(){const T=TRACK;if(T._grid)return T._grid;const G=40,g=new Map();
+  for(let i=0;i<T.N;i++){const p=T.pts[i],key=gKey(Math.floor(p.x/G),Math.floor(p.y/G));let a=g.get(key);if(!a)g.set(key,a=[]);a.push(i);}
+  return T._grid={G,g};}
 function nearestIdxWide(x,y,hint,win){
-  const {pts,N}=TRACK; let best=hint,bd=Infinity;
-  for(let k=-win;k<=win;k++){const i=(hint+k+N*4)%N,p=pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i;}}
+  const {pts,N}=TRACK;const {G,g}=trackGrid();const cx0=Math.floor(x/G),cy0=Math.floor(y/G);let best=-1,bd=Infinity;
+  for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L=g.get(gKey(cx0+a,cy0+b));if(!L)continue;for(let m=0;m<L.length;m++){const i=L[m],p=pts[i];const dx=p.x-x,dy=p.y-y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=i;}}}
+  if(best>=0)return best;
+  best=hint;for(let k=-win;k<=win;k++){const i=(hint+k+N*4)%N,p=pts[i];const d=(p.x-x)**2+(p.y-y)**2;if(d<bd){bd=d;best=i;}}
   return best;
 }
+/* Height of the ground anywhere, consistent with what is drawn: the road and
+   its banking, the verge, then the terrain bands with their own heights. */
+/* How far the land beside a track point may reach before it runs into another
+   part of the track – the infield of a loop, the other leg of a hairpin.
+   Without this the 320 m hillside of one straight stood as a tilted sheet in
+   the sky above the opposite straight. Computed once per track and side: walk
+   out along the normal; where a point is nearer to a distant part of the
+   track than to its own, the land stops halfway. */
+function landClearance(i,side){const T=TRACK;if(!T._clr){T._clr={'1':new Float32Array(T.N),'-1':new Float32Array(T.N)};
+    for(const sd of [1,-1])for(let k=0;k<T.N;k++){const q=T.pts[k];let c=320;
+      for(let r=20;r<=320;r+=20){const x=q.x+sd*q.nx*r,y=q.y+sd*q.ny*r;const j=nearestIdxWide(x,y,k,0);const p=T.pts[j];
+        let ds=Math.abs(p.s-q.s);ds=Math.min(ds,T.len-ds);
+        if(ds>r*1.5+20&&Math.hypot(p.x-x,p.y-y)<r*0.9){c=Math.max(36,r*0.5);break;}}
+      T._clr[String(sd)][k]=c;}}
+  return T._clr[String(side)][i];}
+/* Height of the land at lateral distance r from a track point: the verge at
+   road level to 34 m, rising to the hill height at 130 m, to the far height at
+   320 m. Used wherever the land is cut short, so a band that ends early ends
+   at the height the land has there – no walls. */
+function terrainAt(q,side,r){const zv=q.z+side*q.bank*(q.w+VERGE);if(r<=34)return zv;
+  const h=landH(q.x+side*q.nx*r,q.y+side*q.ny*r);const t=Math.min(1,(r-34)/20);return zv+(h-zv)*t;}   // the field, eased in from the verge edge
+/* ═══════════ Land: one height field for everything off the road ═══════════
+   The land used to be built from bands along the track, as polygons. Seen from
+   the side, from behind, across a loop or a hairpin, these bands overlapped,
+   ended in vertical cuts and changed shape with the view – surfaces appeared,
+   vanished and flickered. Now the land is a single height field over the
+   whole map: rolling hills H(x, y) independent of the track, blended down to
+   the road and its verge within 30–140 m of the nearest track point. The far
+   land is drawn by marching rays through this field per screen column (a
+   y-buffer, front to back, as in the old voxel landscapes); the near bands
+   beside the road sample the same field, so near and far always agree. */
+function landField(){const T=TRACK;if(T._lf)return T._lf;
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of T.pts){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);}
+  const C=16,M=200;x0-=M;y0-=M;x1+=M;y1+=M;const nx=Math.ceil((x1-x0)/C)+1,ny=Math.ceil((y1-y0)/C)+1;
+  const dist=new Float32Array(nx*ny),zr=new Float32Array(nx*ny);
+  const P=T.pts.filter((p,i)=>i%2===0);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=x0+i*C,y=y0+j*C;let bd=1e18,bz=0;for(const p of P){const d=(p.x-x)*(p.x-x)+(p.y-y)*(p.y-y);if(d<bd){bd=d;bz=p.z||0;}}dist[j*nx+i]=Math.sqrt(bd);zr[j*nx+i]=bz;}
+  return T._lf={x0,y0,C,nx,ny,dist,zr};}
+function lfSample(arr,lf,x,y){const fx=(x-lf.x0)/lf.C,fy=(y-lf.y0)/lf.C;if(fx<0||fy<0||fx>=lf.nx-1||fy>=lf.ny-1)return null;
+  const i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j,k=j*lf.nx+i;return (arr[k]*(1-u)+arr[k+1]*u)*(1-v)+(arr[k+lf.nx]*(1-u)+arr[k+lf.nx+1]*u)*v;}
+/* Hills from value noise, not from sines: sums of a few sine waves repeat and
+   read as regular waves on the horizon. Value noise – random heights on a
+   lattice, smoothly interpolated – summed over four octaves (1.6 km down to
+   140 m) gives irregular hills, ridges and saddles that never repeat. */
+function vhash(i,j,s){let h=(i*374761393+j*668265263+s*1442695041)|0;h=(h^(h>>>13))*1274126177|0;return ((h^(h>>>16))>>>0)/4294967295;}
+function vnoise(x,y,s){const i=Math.floor(x),j=Math.floor(y),u=x-i,v=y-j,su=u*u*u*(u*(u*6-15)+10),sv=v*v*v*(v*(v*6-15)+10);
+  const a=vhash(i,j,s),b=vhash(i+1,j,s),c=vhash(i,j+1,s),d=vhash(i+1,j+1,s);return (a+(b-a)*su)+((c+(d-c)*su)-(a+(b-a)*su))*sv;}
+/* The land is gentle on purpose: undulating ground a few metres up and down,
+   nothing that rises into the sky as a hill line. Hills at a finite distance
+   show parallax while driving and read as moving waves on the horizon; the
+   mountains are the triangular ridges at infinity, which only turn with the
+   car. What stands out of the land is forest. */
+function hillsRawLow(x,y){return (glAvailable()?22:7)*(vnoise(x/1700,y/1700,1)-0.45)+(glAvailable()?9:3)*(vnoise(x/720,y/720,2)-0.5);}   // real hills where a mesh with depth buffer draws them
+function hillsRaw(x,y){return hillsRawLow(x,y)+(glAvailable()?3:1.6)*(vnoise(x/310,y/310,3)-0.5)+(glAvailable()?1.2:0.8)*(vnoise(x/140,y/140,4)-0.5);}
+function forestRaw(x,y){return 0.35+0.75*vnoise(x/650,y/650,7)+0.25*(vnoise(x/180,y/180,8)-0.5);}
+// both tabulated on a 24 m grid, 3.5 km around the track, sampled bilinearly – the ray march samples them thousands of times per frame
+function landGrid(){const T=TRACK;if(T._lg)return T._lg;let cx0=0,cy0=0;for(const p of T.pts){cx0+=p.x;cy0+=p.y;}cx0/=T.N;cy0/=T.N;
+  const C=24,R=3500,n=Math.ceil(2*R/C)+1,x0=cx0-R,y0=cy0-R,H=new Float32Array(n*n),F=new Float32Array(n*n);
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const x=x0+i*C,y=y0+j*C;H[j*n+i]=hillsRaw(x,y);F[j*n+i]=forestRaw(x,y);}
+  return T._lg={x0,y0,C,nx:n,ny:n,H,F};}
+function hillsH(x,y){const a=1;const g=landGrid();const v=lfSample(g.H,g,x,y);return a*(v===null?hillsRaw(x,y):v);}
+function forestMask(x,y){const g=landGrid();const v=lfSample(g.F,g,x,y);return v===null?forestRaw(x,y):v;}
+/* Height of the land at (x, y). */
+function landHraw(x,y){const lf=landField();const d=lfSample(lf.dist,lf,x,y);const H=hillsH(x,y);if(d===null||d>=140)return H;
+  const z=lfSample(lf.zr,lf,x,y),t=d<=30?0:(d-30)/110,sm=t*t*(3-2*t);return z+(H-z)*sm;}
+/* The finished land – height with the road blended in, and the forest mask
+   faded out near the road – tabulated once per track and surface on a 12 m
+   grid reaching 1.5 km beyond the track, so the ray march costs one bilinear
+   lookup per sample. Beyond the grid the hills are computed directly. */
+function landTab(){const T=TRACK,key=cfg.surface;if(T._lt&&T._lt.key===key)return T._lt;
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of T.pts){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);}
+  const C=12,M=1500;x0-=M;y0-=M;x1+=M;y1+=M;const nx=Math.ceil((x1-x0)/C)+1,ny=Math.ceil((y1-y0)/C)+1;const lf=landField();
+  const H=new Float32Array(nx*ny),HL=new Float32Array(nx*ny),F=new Float32Array(nx*ny);const aS=1;
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const x=x0+i*C,y=y0+j*C,k=j*nx+i;H[k]=landHraw(x,y);
+    // the smooth version: same road blend, only the low octaves – used far away, where fine ridges would only shimmer
+    HL[k]=H[k]+aS*(hillsRawLow(x,y)-hillsRaw(x,y))*(()=>{const d=lfSample(lf.dist,lf,x,y);if(d===null||d>=140)return 1;const t=d<=30?0:(d-30)/110;return t*t*(3-2*t);})();
+    const dr=lfSample(lf.dist,lf,x,y);const fe=dr===null?1:clamp((dr-40)/40,0,1);F[k]=forestMask(x,y)*fe*fe*(3-2*fe);}
+  /* lighting from central differences over two cells, tabulated and sampled bilinearly like the height: the per-cell gradient was
+     discontinuous at every cell edge and drew diagonal stripes across the hills */
+  const SH=new Float32Array(nx*ny);
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const i0=Math.max(0,i-2),i1=Math.min(nx-1,i+2),j0=Math.max(0,j-2),j1=Math.min(ny-1,j+2);
+    const gx=(H[j*nx+i1]-H[j*nx+i0])/((i1-i0)*C),gy=(H[j1*nx+i]-H[j0*nx+i])/((j1-j0)*C);SH[j*nx+i]=clamp(-(gx*SUNX+gy*SUNY)*4,-1,1);}
+  return T._lt={key,x0,y0,C,nx,ny,H,HL,F,SH};}
+function landH(x,y){if(!TRACK.hasZ)return 0;const t=landTab();const v=lfSample(t.H,t,x,y);return v===null?hillsH(x,y):v;}
+function landF(x,y){const t=landTab();const v=lfSample(t.F,t,x,y);return v===null?forestMask(x,y):v;}
+function terrainKS(q){return Math.sin(q.s*0.0052+0.8);}
+/* Far land by ray marching: for each column of a low-resolution buffer, a ray
+   from the eye along the ground, 40 m to 2.5 km in growing steps; each sample's
+   land height (plus forest canopy) is projected, and what rises above the
+   y-buffer is filled – front to back, so nearer hills hide farther ones and
+   nothing is ever drawn twice. Colour: meadow and field patches, forest,
+   lit or shaded by the slope towards the viewer, faded into the haze with
+   distance. The buffer is drawn scaled up and smoothed under everything near. */
+let LR=null;const SUNX=Math.cos(3.5),SUNY=Math.sin(3.5);
+function drawLandRays(SC){
+  const W=cv.width,H=cv.height;const cols=Math.round(clamp(Math.round(W/(3*DPR)),240,520)*(DETAIL.lvl>=1?0.6:1)),rows=Math.max(80,Math.round(cols*H/W));   // fine enough not to look pixelated   // resolution by CSS pixels, not device pixels – smoothed anyway
+  if(!LR||LR.cols!==cols||LR.rows!==rows){const c=document.createElement('canvas');c.width=cols;c.height=rows;LR={c,x:c.getContext('2d'),cols,rows,img:null,buf:null};LR.img=LR.x.createImageData(cols,rows);LR.buf=new Uint32Array(LR.img.data.buffer);}
+  const buf=LR.buf;buf.fill(0);
+  const sx=W/cols,sy=H/rows;
+  const rgb=h=>rgbOf(h),hz=rgb(SC.haze),me=rgb(SC.meadow),fi=rgb(SC.field),tr=rgb(mixCol(SC.tree,SC.crown,0.25)),gN=rgb(SC.gFar);
+  const forest=SC.forest||0, hL=SC.hazeL;
+  const pack=(r,g,b)=>(255<<24)|(b<<16)|(g<<8)|r;
+  const HMAX=Math.max(TRACK.zMax||0,0)+7;   // highest the land can reach: the gentle relief, or the road where it is higher – lets the rays stop early
+  const lt=landTab();
+  for(let c=0;c<cols;c++){
+    const tx=((c+0.5)*sx-cam3.cxp)/cam3.f;let dx=cam3.fx+tx*cam3.rx,dy=cam3.fy+tx*cam3.ry;const dl=Math.hypot(dx,dy)||1;dx/=dl;dy/=dl;
+    let yb=rows,ybF=rows,d=14,prevH=null,lR=-1,lG=0,lB=0;
+    while(d<1900&&yb>0){const x=cam3.ex+dx*d,y=cam3.ey+dy*d;
+      // early stop: if even the highest possible land at this distance would not rise above the buffer, nothing farther will
+      {const czM=(x-cam3.ex)*cam3.fx+(y-cam3.ey)*cam3.fy+(HMAX-cam3.ez)*cam3.fz;if(czM>1){const cyM=(x-cam3.ex)*cam3.ux+(y-cam3.ey)*cam3.uy+(HMAX-cam3.ez)*cam3.uz;if((cam3.cyp-cam3.f*cyM/czM)/sy>=ybF)break;}}
+      // land height and forest from the tables (one lookup each, sharing the cell)
+      let h,m,sh=0;{const fx=(x-lt.x0)/lt.C,fy=(y-lt.y0)/lt.C;if(fx>=0&&fy>=0&&fx<lt.nx-1&&fy<lt.ny-1){const i=fx|0,j=fy|0,u=fx-i,v=fy-j,k=j*lt.nx+i,n2=lt.nx;
+          const wl=d<350?0:d>900?1:(d-350)/550;   // fine detail near, smooth far
+          const h00=lt.H[k]+(lt.HL[k]-lt.H[k])*wl,h10=lt.H[k+1]+(lt.HL[k+1]-lt.H[k+1])*wl,h01=lt.H[k+n2]+(lt.HL[k+n2]-lt.H[k+n2])*wl,h11=lt.H[k+n2+1]+(lt.HL[k+n2+1]-lt.H[k+n2+1])*wl;
+          h=(h00*(1-u)+h10*u)*(1-v)+(h01*(1-u)+h11*u)*v;m=(lt.F[k]*(1-u)+lt.F[k+1]*u)*(1-v)+(lt.F[k+n2]*(1-u)+lt.F[k+n2+1]*u)*v;
+          sh=(lt.SH[k]*(1-u)+lt.SH[k+1]*u)*(1-v)+(lt.SH[k+n2]*(1-u)+lt.SH[k+n2+1]*u)*v;}
+        else{h=hillsH(x,y);m=forestMask(x,y);}}
+      // forest canopy: rises smoothly at the forest edge and towards the road, with a ragged top of crowns
+      // a stand of forest: a flat-topped canopy about 12 m high with a steep edge, like a real wood seen from afar – not rounded bumps
+      /* woodland shows only as darker ground: a canopy raised on the field reads, at a distance and while driving,
+         as rounded waves sliding along the horizon. Trees that stand up are the individual ones beside the road. */
+      let fo=0;if(forest>0){m*=forest;if(m>0.44)fo=0.55*clamp((m-0.44)/0.06,0,1);}
+      const cz=(x-cam3.ex)*cam3.fx+(y-cam3.ey)*cam3.fy+(h-cam3.ez)*cam3.fz;
+      if(cz>1){const cyv=(x-cam3.ex)*cam3.ux+(y-cam3.ey)*cam3.uy+(h-cam3.ez)*cam3.uz;const ys=(cam3.cyp-cam3.f*cyv/cz)/sy;
+        const yt=Math.max(0,Math.floor(ys));
+        if(ys<ybF){
+          // colour: fields and meadows, forest; slope towards the viewer lighter; haze with distance
+          // light from the low sun's side, fixed in the world – slopes facing it lighter, turned away darker; no shimmer while driving
+          const sl=fo>0.5?sh*0.4:sh;   // the forest canopy takes the light less than open ground
+          const fp=0.5+0.5*Math.sin(x*0.009+1.7)*Math.cos(y*0.0073+0.4);
+          const kf=clamp((fp-0.55)/0.15,0,1);let r=me[0]+(fi[0]-me[0])*kf,g=me[1]+(fi[1]-me[1])*kf,b=me[2]+(fi[2]-me[2])*kf;
+          if(fo>0){r+=(tr[0]-r)*fo;g+=(tr[1]-g)*fo;b+=(tr[2]-b)*fo;}
+          const lit=1+0.35*sl;r*=lit;g*=lit;b*=lit;
+          const hf=1-Math.exp(-d/hL);r=r+(hz[0]-r)*hf;g=g+(hz[1]-g)*hf;b=b+(hz[2]-b)*hf;
+          const R8=clamp(r|0,0,255),G8=clamp(g|0,0,255),B8=clamp(b|0,0,255),px=pack(R8,G8,B8);
+          // the nearer span's partly covered top pixel: this farther land lies behind it – blend, make it opaque
+          if(yb<rows){const k=yb*cols+c,o=buf[k],oa=(o>>>24)&255;if(oa<255){const a=oa/255;
+            buf[k]=pack(((o&255)*a+R8*(1-a))|0,(((o>>8)&255)*a+G8*(1-a))|0,(((o>>16)&255)*a+B8*(1-a))|0);}}
+          /* shade the span from this sample's colour at its top to the colour of the nearer land below it – stepping in
+             distance otherwise leaves every span flat, and side by side the columns show as a comb of bands */
+          if(lR<0){for(let yy=yt+1;yy<yb;yy++)buf[yy*cols+c]=px;}
+          else{const span=Math.max(1,ybF-ys);for(let yy=yt+1;yy<yb;yy++){const t=clamp((yy-ys)/span,0,1);buf[yy*cols+c]=pack((R8+(lR-R8)*t)|0,(G8+(lG-G8)*t)|0,(B8+(lB-B8)*t)|0);}}
+          lR=R8;lG=G8;lB=B8;
+          // the top pixel only partly covered: alpha from the fractional height – a smooth silhouette instead of steps
+          if(yt<yb){const cov=clamp(yt+1-ys,0,1),old=buf[yt*cols+c];const oa=(old>>>24)&255;
+            if(oa===0)buf[yt*cols+c]=((Math.round(cov*255))<<24)|(B8<<16)|(G8<<8)|R8;else buf[yt*cols+c]=px;}
+          yb=yt;ybF=ys;}}
+      prevH=h;d=d<900?Math.min(d*1.06+1.2,d+25):d+45;}   // short steps where the fine relief is used, so a crest does not fall between two samples and the hill line wobbles; the smooth far relief tolerates 45 m
+  }
+  LR.x.putImageData(LR.img,0,0);
+  cx.save();cx.setTransform(1,0,0,1,0,0);cx.imageSmoothingEnabled=true;cx.drawImage(LR.c,0,0,W,H);cx.restore();
+}
+function terrainHill(q,sd){return q.z*0.6+sd*terrainKS(q)*9+3+3*Math.sin(q.s*0.031+sd*0.7);}
+function terrainFar(q,sd){return q.z*0.3+sd*terrainKS(q)*24+9+5*Math.sin(q.s*0.019+sd*1.9);}
+function groundHeight(x,y,idx){const q=TRACK.pts[idx];const n=(x-q.x)*q.nx+(y-q.y)*q.ny,an=Math.abs(n),sd=n>=0?1:-1;
+  if(an<=q.w+VERGE)return trackZ(x,y,idx);
+  const zv=q.z+sd*q.bank*(q.w+VERGE);
+  if(!sceneFor())return zv;
+  if(an<=34)return zv;
+  return terrainAt(q,sd,an);}
 function groundZ(x,y){ if(!TRACK.hasZ)return 0; return trackZ(x,y,nearestIdxWide(x,y,S.idx,170)); }
 function nearestIdx(x,y,hint){
   const {pts,N}=TRACK; let best=hint,bd=Infinity;
@@ -942,7 +1129,12 @@ function vertical(dt,ax,ay,dG){
 
 /* ═══════════════ INPUT ═══════════════ */
 const keys={};
+/* Key list: folded away behind a small button bottom left, opened with the
+   button, F1 or '?' – a permanent legend covered the steering display. */
+function toggleKeys(on){const k=document.getElementById('keys');if(!k)return;k.classList.toggle('on',on===undefined?!k.classList.contains('on'):on);}
+{const b=document.getElementById('keysBtn');if(b)b.addEventListener('click',e=>{e.stopPropagation();toggleKeys();});}
 addEventListener('keydown',e=>{
+  if(e.key==='F1'||e.key==='?'){e.preventDefault();toggleKeys();return;}
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
   if(e.repeat)return; keys[e.key.toLowerCase()]=true; keys[e.key]=true;
   const k=e.key.toLowerCase();
@@ -966,6 +1158,7 @@ addEventListener('keydown',e=>{
   }
   if(k==='h')document.getElementById('hud').classList.toggle('off');
   if(k==='i'){setGfx(cfg.gfx==='day'?'dusk':cfg.gfx==='dusk'?'simple':'day');flash('Graphics: '+cfg.gfx);}
+  if(k==='j'){RDBG=!RDBG;flash(RDBG?'Render debug: far band blue, outside window magenta, road window green':'Render debug off');}
   if(k==='u'){cfg.tutor=!cfg.tutor;const b=document.querySelector('#segViz [data-v=tutor]');if(b)b.classList.toggle('on',cfg.tutor);flash(cfg.tutor?'Tutor on – green marks show where to steer':'Tutor off');}
   if(k==='m'){cfg.sound=!cfg.sound;const b=document.querySelector('#segViz [data-v=sound]');if(b)b.classList.toggle('on',cfg.sound);}
   if(k==='v'){cfg.view=cfg.view==='top'?'persp':'top';
@@ -1937,7 +2130,243 @@ function drawThumbKnob(){
   const g=wheelGeom();cx.setTransform(1,0,0,1,0,0);
   cx.fillStyle='rgba(255,179,0,.85)';cx.beginPath();cx.arc(g.ox+Math.cos(TOUCH.thumb)*g.R,g.oy+Math.sin(TOUCH.thumb)*g.R,7*DPR,0,7);cx.fill();
 }
-function draw(){ cfg.view==='top'?drawTopDown():drawPerspective(); if(cfg.view==='top')drawOffTrackHint(cv.width,cv.height); drawStuckHint(cv.width,cv.height); drawTouchUI(); drawSteerHUD(); drawThumbKnob(); }
+
+/* ═══════════════ 3D landscape (WebGL, three.js) ═══════════════
+   The landscape is drawn the way driving games draw it: a terrain mesh from a
+   height map, the road as a ribbon mesh laid on it, trees and posts as
+   instanced low-poly models, a sky dome, distant mountains, distance fog for
+   the aerial perspective – and a depth buffer, so occlusion is exact from
+   every angle and nothing has to be sorted, cut or faded by hand. The 2D
+   canvas on top keeps the instruments, the bonnet, the skid marks, dust and
+   the HUD. Without WebGL or three.js the 2D renderer takes over. */
+const GL={ok:null,key:null};
+const GL_SUN={az:3.5,el:0.15};   // the low sun: light, glow and light shafts all come from here
+function glAvailable(){return typeof THREE!=='undefined'&&!!document.getElementById('world3d');}
+function glActive(){return glAvailable()&&cfg.view==='persp'&&!!sceneFor()&&GL.ok!==false;}
+function glInit(){
+  if(GL.renderer)return true;
+  try{const c=document.getElementById('world3d');
+    GL.renderer=new THREE.WebGLRenderer({canvas:c,antialias:true,logarithmicDepthBuffer:true});
+    GL.renderer.setPixelRatio(1);GL.canvas=c;
+    // linear lighting with sRGB output and a gentle filmic curve: light falls off naturally, highlights do not clip
+    GL.renderer.outputEncoding=THREE.sRGBEncoding;GL.renderer.toneMapping=THREE.NoToneMapping;
+    GL.scene=new THREE.Scene();GL.cam=new THREE.PerspectiveCamera(60,1,0.3,40000);GL.cam.matrixAutoUpdate=false;
+    GL.sun=new THREE.DirectionalLight(0xfff2dc,0.75);GL.hemi=new THREE.HemisphereLight(0xffffff,0x9a9a88,0.9);
+    GL.scene.add(GL.sun,GL.hemi);GL.ok=true;return true;}
+  catch(e){GL.ok=false;console.warn('WebGL unavailable, 2D renderer used',e);return false;}
+}
+const col3=h=>{const c=rgbOf(h);return new THREE.Color(c[0]/255,c[1]/255,c[2]/255).convertSRGBToLinear();};
+const lin=v=>Math.pow(v/255,2.2);   // vertex colours are given in sRGB, lit in linear space
+/* Procedural detail textures, tileable: soft blotches from two octaves of
+   periodic value noise plus grain – grass and earth for the ground, stones
+   for gravel, fine aggregate for tarmac, wind-blown snow. Multiplied onto the
+   vertex colours, so the colour comes from the palette and the texture only
+   adds structure. */
+function makeTex(kind){GL.texs=GL.texs||{};if(GL.texs[kind])return GL.texs[kind];const n=256,c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');const im=g.createImageData(n,n);
+  const P=(x,y,f,sd)=>{const fx=x*f/n,fy=y*f/n,i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j,su=u*u*(3-2*u),sv=v*v*(3-2*v),h=(a,b)=>vhash(((a%f)+f)%f,((b%f)+f)%f,sd);
+    const a=h(i,j),b=h(i+1,j),cc=h(i,j+1),d=h(i+1,j+1);return (a+(b-a)*su)+((cc+(d-cc)*su)-(a+(b-a)*su))*sv;};
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){let v;const gr=Math.random();
+    if(kind==='ground')v=0.80+0.16*P(x,y,4,11)+0.08*P(x,y,16,12)+0.06*(gr-0.5);
+    else if(kind==='gravel')v=0.84+0.08*P(x,y,8,21)+(gr>0.93?0.22:gr<0.06?-0.2:0.05*(gr-0.5));
+    else if(kind==='tarmac')v=0.88+0.06*P(x,y,8,31)+0.08*(gr-0.5)+(gr>0.985?0.18:0);
+    else v=0.90+0.07*P(x,y,4,41)+0.03*P(x,y,32,42)+0.02*(gr-0.5);
+    const b=clamp(Math.round(v*255),0,255);im.data[(y*n+x)*4]=im.data[(y*n+x)*4+1]=im.data[(y*n+x)*4+2]=b;im.data[(y*n+x)*4+3]=255;}
+  g.putImageData(im,0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;t.encoding=THREE.sRGBEncoding;return GL.texs[kind]=t;}
+function noiseTex(){return makeTex('ground');}
+function glClear(){const sc=GL.scene;for(const o of (GL.objs||[])){sc.remove(o);o.traverse&&o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}GL.objs=[];}
+function glAdd(o){GL.scene.add(o);GL.objs.push(o);return o;}
+// ground height for the mesh: below the road, the verge, then the land field
+function glGround(x,y,hint){const lf=landField();const d=lfSample(lf.dist,lf,x,y);if(d!==null&&d>70)return landH(x,y);
+  const i=nearestIdxWide(x,y,hint,400),q=TRACK.pts[i];const n=(x-q.x)*q.nx+(y-q.y)*q.ny,an=Math.abs(n),sd=n>=0?1:-1;
+  if(an<=q.w+0.8)return q.z+q.bank*n-0.4;return terrainAt(q,sd,an)-0.08;}
+function glBuild(){
+  glClear();const T=TRACK,N=T.N,sc=sceneFor(),sur=SURF[cfg.surface];
+  GL.scene.fog=new THREE.Fog(col3(sc.haze),80,sc.hazeL*6);
+  const sa=GL_SUN.az,se=GL_SUN.el;GL.sun.position.set(Math.cos(sa)*Math.cos(se),Math.sin(sa)*Math.cos(se),Math.sin(se));
+  GL.hemi.color=col3(mixCol(sc.skyHor,'#ffffff',0.3));GL.hemi.groundColor=col3(sc.gNear);
+  // terrain mesh
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of T.pts){x0=Math.min(x0,p.x);x1=Math.max(x1,p.x);y0=Math.min(y0,p.y);y1=Math.max(y1,p.y);}
+  const M=1600,C=14;x0-=M;y0-=M;x1+=M;y1+=M;const nx=Math.ceil((x1-x0)/C)+1,ny=Math.ceil((y1-y0)/C)+1;
+  const pos=new Float32Array(nx*ny*3),colA=new Float32Array(nx*ny*3),uv=new Float32Array(nx*ny*2);
+  const me=rgbOf(sc.meadow),fi=rgbOf(sc.field),gF=rgbOf(sc.gFar),ve=rgbOf(sc.verge),fo=rgbOf(mixCol(sc.tree,sc.gNear,0.45));let hint=0;
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){const k=j*nx+i,x=x0+i*C,y=y0+j*C;const z=glGround(x,y,hint);
+    pos[k*3]=x;pos[k*3+1]=y;pos[k*3+2]=z;uv[k*2]=x/9;uv[k*2+1]=y/9;
+    const fp=0.5+0.5*Math.sin(x*0.009+1.7)*Math.cos(y*0.0073+0.4),kf=clamp((fp-0.55)/0.15,0,1),m=(sc.forest||0)*landF(x,y),kw=clamp((m-0.44)/0.06,0,1)*0.8;
+    let r=me[0]+(fi[0]-me[0])*kf,g=me[1]+(fi[1]-me[1])*kf,b=me[2]+(fi[2]-me[2])*kf;r+=(fo[0]-r)*kw;g+=(fo[1]-g)*kw;b+=(fo[2]-b)*kw;
+    const lfd=landField(),dr=lfSample(lfd.dist,lfd,x,y);if(dr!==null&&dr<40){const t=clamp((40-dr)/20,0,1);r+=(ve[0]-r)*t;g+=(ve[1]-g)*t;b+=(ve[2]-b)*t;}
+    // slopes: steep ground shows bare earth and rock
+    colA[k*3]=lin(r);colA[k*3+1]=lin(g);colA[k*3+2]=lin(b);}
+  const idx=[];for(let j=0;j<ny-1;j++)for(let i=0;i<nx-1;i++){const a=j*nx+i,b2=a+1,c2=a+nx,d2=c2+1;idx.push(a,b2,d2,a,d2,c2);}
+  const tg=new THREE.BufferGeometry();tg.setAttribute('position',new THREE.BufferAttribute(pos,3));tg.setAttribute('color',new THREE.BufferAttribute(colA,3));tg.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  tg.setIndex(idx.length>65535?new THREE.Uint32BufferAttribute(idx,1):new THREE.Uint16BufferAttribute(idx,1));tg.computeVertexNormals();
+  {const nrm=tg.attributes.normal.array,rk=rgbOf(sc.snowCap?'#9aa0a6':mixCol(sc.rock,sc.field,0.4));for(let k=0;k<nx*ny;k++){const st=1-Math.abs(nrm[k*3+2]);const t=clamp((st-0.10)/0.15,0,0.85);
+    if(t>0){colA[k*3]+=(lin(rk[0])-colA[k*3])*t;colA[k*3+1]+=(lin(rk[1])-colA[k*3+1])*t;colA[k*3+2]+=(lin(rk[2])-colA[k*3+2])*t;}}tg.attributes.color.needsUpdate=true;}
+  glAdd(new THREE.Mesh(tg,new THREE.MeshLambertMaterial({vertexColors:true,map:noiseTex(),side:THREE.DoubleSide})));
+  // a far ground disc so the land never ends before the fog does
+  const disc=new THREE.Mesh(new THREE.CircleGeometry(30000,64),new THREE.MeshLambertMaterial({color:col3(sc.gFar),side:THREE.DoubleSide}));disc.position.set((x0+x1)/2,(y0+y1)/2,(T.zMin||0)-6);glAdd(disc);
+  // road and shoulders as ribbons; polygon offset keeps them on top of the ground they lie on
+  const ribbon=(off0,off1,dz,color,pts,pri)=>{const n=pts.length,P=new Float32Array((n+1)*6),Cc=new Float32Array((n+1)*6),U=new Float32Array((n+1)*4);const cc=rgbOf(color);
+    for(let k=0;k<=n;k++){const q=pts[k%n],qq=T.pts[k%n];const z0=qq.z+qq.bank*off0+dz,z1=qq.z+qq.bank*off1+dz;
+      P.set([q.x+q.nx*off0,q.y+q.ny*off0,z0,q.x+q.nx*off1,q.y+q.ny*off1,z1],k*6);Cc.set([lin(cc[0]),lin(cc[1]),lin(cc[2]),lin(cc[0]),lin(cc[1]),lin(cc[2])],k*6);
+      const sv=(qq.s||0)/6;U.set([off0/6,sv,off1/6,sv],k*4);}
+    const I=[];for(let k=0;k<n;k++){const a=k*2;I.push(a,a+1,a+3,a,a+3,a+2);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('color',new THREE.BufferAttribute(Cc,3));g.setAttribute('uv',new THREE.BufferAttribute(U,2));
+    g.setIndex(new THREE.Uint32BufferAttribute(I,1));g.computeVertexNormals();
+    const mat=new THREE.MeshLambertMaterial({vertexColors:true,map:noiseTex(),side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2-pri,polygonOffsetUnits:-8-4*pri});
+    const m=new THREE.Mesh(g,mat);m.renderOrder=1+pri;return glAdd(m);};
+  const W=T.pts.map(p=>p.w);
+  for(const side of [1,-1])ribbon(side>0?T.pts[0].w:-T.pts[0].w-VERGE,side>0?T.pts[0].w+VERGE:-T.pts[0].w,0.02,sc.verge,T.pts.map(p=>({x:p.x,y:p.y,nx:p.nx,ny:p.ny})),0);
+  // the road itself (per-point width)
+  {const n=N,P=new Float32Array((n+1)*6),U=new Float32Array((n+1)*4);for(let k=0;k<=n;k++){const q=T.pts[k%n];P.set([q.x+q.nx*q.w,q.y+q.ny*q.w,q.z+q.bank*q.w+0.05,q.x-q.nx*q.w,q.y-q.ny*q.w,q.z-q.bank*q.w+0.05],k*6);U.set([0,q.s/6,q.w/3,q.s/6],k*4);}
+   const I=[];for(let k=0;k<n;k++){const a=k*2;I.push(a,a+1,a+3,a,a+3,a+2);}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('uv',new THREE.BufferAttribute(U,2));g.setIndex(new THREE.Uint32BufferAttribute(I,1));g.computeVertexNormals();
+   const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col3(mixCol(sur.fill3,'#ffffff',cfg.surface==='snow'?0.1:0.18)),map:makeTex(cfg.surface==='tarmac'?'tarmac':cfg.surface==='snow'?'snow':'gravel'),side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-14}));m.renderOrder=2;glAdd(m);
+   // edge lines
+   for(const side of [1,-1]){const P2=new Float32Array((n+1)*6);for(let k=0;k<=n;k++){const q=T.pts[k%n],o0=side*(q.w-0.22),o1=side*q.w;P2.set([q.x+q.nx*o0,q.y+q.ny*o0,q.z+q.bank*o0+0.06,q.x+q.nx*o1,q.y+q.ny*o1,q.z+q.bank*o1+0.06],k*6);}
+     const g2=new THREE.BufferGeometry();g2.setAttribute('position',new THREE.BufferAttribute(P2,3));g2.setIndex(new THREE.Uint32BufferAttribute(I,1));g2.computeVertexNormals();
+     const e=new THREE.Mesh(g2,new THREE.MeshLambertMaterial({color:col3(sur.edge3),side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-20}));e.renderOrder=3;glAdd(e);}}
+  // the driven line and its ruts, darker, on the ideal line
+  if(LINE&&cfg.driven){const R=ROAD[cfg.surface]||ROAD.gravel;const L=LINE.map((p,k)=>({x:p.x,y:p.y,nx:T.pts[k].nx,ny:T.pts[k].ny}));
+    if(R.band)ribbon(-R.band,R.band,0.065,mixCol(sur.fill3,'#000000',cfg.surface==='snow'?0.28:0.14),L,2);
+    if(R.rut>0)for(const sd of [1,-1])ribbon(sd*RUT_HALF-0.18,sd*RUT_HALF+0.18,0.07,mixCol(sur.fill3,'#000000',cfg.surface==='snow'?0.45:0.3),L,3);}
+  // snowbanks
+  if(sc.bank)for(const side of [1,-1]){const n=N,P=new Float32Array((n+1)*9),I=[];for(let k=0;k<=n;k++){const q=T.pts[k%n];
+      for(let m=0;m<3;m++){const o=side*(q.w+[0.3,0.9,1.7][m]),h=[0,0.45,0][m];P.set([q.x+q.nx*o,q.y+q.ny*o,q.z+q.bank*o+h+0.03],k*9+m*3);}}
+    for(let k=0;k<n;k++){const a=k*3;I.push(a,a+1,a+4,a,a+4,a+3,a+1,a+2,a+5,a+1,a+5,a+4);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setIndex(new THREE.Uint32BufferAttribute(I,1));g.computeVertexNormals();
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col3('#eef1f4'),side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8}));m.renderOrder=1;glAdd(m);}
+  // instanced models: guide posts and vegetation
+  const inst=(geo,mat,list)=>{if(!list.length)return;const im=new THREE.InstancedMesh(geo,mat,list.length);const m4=new THREE.Matrix4(),q4=new THREE.Quaternion(),v=new THREE.Vector3(),s3=new THREE.Vector3();
+    list.forEach((it,k)=>{v.set(it.x,it.y,it.z);q4.setFromAxisAngle(new THREE.Vector3(0,0,1),it.rot||0);s3.set(it.sx,it.sy,it.sz);m4.compose(v,q4,s3);im.setMatrixAt(k,m4);im.setColorAt(k,it.lc?new THREE.Color(it.lc[0],it.lc[1],it.lc[2]):col3(it.c));});
+    im.instanceMatrix.needsUpdate=true;if(im.instanceColor)im.instanceColor.needsUpdate=true;glAdd(im);};
+  const posts=[];for(const p of T.pts){if(!p.post)continue;for(const side of (p.post===3?[1,-1]:[p.post===1?1:-1])){const o=side*(p.w+0.85);posts.push({x:p.x+p.nx*o,y:p.y+p.ny*o,z:p.z+p.bank*o+0.52,sx:0.12,sy:0.12,sz:1.05,c:'#e4dccb'});}}
+  const box=new THREE.BoxGeometry(1,1,1);inst(box,new THREE.MeshLambertMaterial(),posts);
+  const facet=g=>{const n=g.index?g.toNonIndexed():g;n.computeVertexNormals();return n;};   // faceted shading: Lambert has no flatShading in r128
+  /* Tree models, built once per scene from several parts and merged into one
+     geometry each, with their colours in the vertices: a tapered trunk, and
+     a spruce of four drooping tiers, each darker at its underside and lighter
+     towards its tips; broad-leaved crowns of several lobes, darker inside and
+     below, lit on top; pines with a long bare trunk and a flat crown; birches
+     slim and pale. Every instance is a scaled, rotated, slightly tinted copy. */
+  const part=(g,mx,col,shade)=>{const n=facet(g);n.applyMatrix4(mx);const P=n.attributes.position,C=new Float32Array(P.count*3);let z0=1e9,z1=-1e9;for(let k=0;k<P.count;k++){z0=Math.min(z0,P.getZ(k));z1=Math.max(z1,P.getZ(k));}
+    const c=rgbOf(col);for(let k=0;k<P.count;k++){const t=(P.getZ(k)-z0)/Math.max(1e-6,z1-z0);const f=shade?shade(t,P.getX(k),P.getY(k)):1;C[k*3]=lin(c[0])*f;C[k*3+1]=lin(c[1])*f;C[k*3+2]=lin(c[2])*f;}
+    n.setAttribute('color',new THREE.BufferAttribute(C,3));return n;};
+  const merge=parts=>{let n=0;for(const p2 of parts)n+=p2.attributes.position.count;const P=new Float32Array(n*3),Nn=new Float32Array(n*3),C=new Float32Array(n*3);let o=0;
+    for(const p2 of parts){P.set(p2.attributes.position.array,o*3);Nn.set(p2.attributes.normal.array,o*3);C.set(p2.attributes.color.array,o*3);o+=p2.attributes.position.count;}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('normal',new THREE.BufferAttribute(Nn,3));g.setAttribute('color',new THREE.BufferAttribute(C,3));return g;};
+  const M4=()=>new THREE.Matrix4();
+  const tr=(x,y,z)=>M4().makeTranslation(x,y,z),sc4=(x,y,z)=>M4().makeScale(x,y,z),mul=(...ms)=>ms.reduce((a2,b2)=>a2.multiply(b2),M4());
+  const rotX=M4().makeRotationX(Math.PI/2);
+  const trunkG=(h,r0,r1,col)=>part(new THREE.CylinderGeometry(r1,r0,h,6,1),mul(tr(0,0,h/2),rotX),col,t=>0.75+0.35*t);
+  const spruceG=snow=>merge([trunkG(0.22,0.035,0.02,sc.trunk),...[0,1,2,3].map(k=>{const r=0.31-k*0.065,h=0.36-k*0.045,z=0.12+k*0.19;
+      return part(new THREE.ConeGeometry(r,h,9,1),mul(tr(0,0,z+h/2),rotX),sc.tree,(t,x,y)=>{const edge=Math.min(1,Math.hypot(x,y)/r);let f=0.62+0.38*t+0.18*edge;if(snow&&t<0.45&&edge>0.55)f*=1.9;return f;});}),
+    part(new THREE.ConeGeometry(0.05,0.14,6,1),mul(tr(0,0,0.95),rotX),sc.tree,t=>0.9+0.3*t)]);
+  const lobes=(list,col,lit)=>list.map(([x,y,z,r])=>part(new THREE.IcosahedronGeometry(r,1),tr(x,y,z),col,(t,px,py)=>(0.55+0.55*t)*(lit||1)));
+  const broadG=(col,trunkCol)=>merge([trunkG(0.5,0.05,0.035,trunkCol),...lobes([[0,0,0.66,0.27],[0.17,0.06,0.58,0.2],[-0.15,0.09,0.6,0.2],[0.02,-0.15,0.62,0.19],[0,0,0.84,0.16]],col)]);
+  const pineG=merge([trunkG(0.82,0.035,0.025,'#5a4634'),...lobes([[0,0,0.86,0.2],[0.16,0.05,0.82,0.14],[-0.14,-0.06,0.84,0.13]],mixCol(sc.tree,'#7f8a62',0.2))]);
+  const birchG=winter=>merge([trunkG(0.62,0.03,0.02,'#d2ccc0'),...lobes([[0,0,0.72,0.18],[0.1,0.05,0.62,0.13],[-0.08,-0.06,0.66,0.13],[0,0.02,0.86,0.12]],winter?mixCol('#6f7579','#d6dbe0',0.35):mixCol(sc.crown,'#9aa270',0.4))]);
+  const cypressG=merge([trunkG(0.1,0.03,0.02,sc.trunk),part(new THREE.IcosahedronGeometry(1,2),mul(tr(0,0,0.55),sc4(0.11,0.11,0.46)),sc.tree,t=>0.6+0.5*t)]);   // one slender spindle
+  const rockG=facet(new THREE.DodecahedronGeometry(1,0));const blob=facet(new THREE.IcosahedronGeometry(1,1));
+  const L={spruce:[],broad:[],pine:[],birch:[],cypress:[],rock:[],bush:[]};const bush=T.pts.bush||[];
+  // per-tree variation as a linear factor around 1 (the model carries the colour): a little lighter or darker, a touch more or less green
+  const tint=seed=>{const v=0.84+0.3*(((seed*48271>>>0)%1000)/1000),g=0.96+0.08*(((seed*16807>>>0)%100)/100);return [v,v*g,v*0.97];};
+  const tree=(list,x,y,z,ht,wf,rot,seed)=>list.push({x,y,z,sx:ht*wf,sy:ht*wf,sz:ht,rot,lc:tint(seed)});
+  bush.forEach((b,n)=>{const seed=b.k!==undefined?b.k:n,kind=vegKind(sc,seed),u=((seed*40503>>>0)%1000)/1000,z=b.z||0,rot=u*6.28;
+    if(kind==='conifer')tree(L.spruce,b.x,b.y,z,5+u*9,0.9+0.25*u,rot,seed);
+    else if(kind==='pine')tree(L.pine,b.x,b.y,z,8+u*7,1.0,rot,seed);
+    else if(kind==='birch')tree(L.birch,b.x,b.y,z,6+u*6,1.0,rot,seed);
+    else if(kind==='decid')tree(L.broad,b.x,b.y,z,5+u*6,1.0,rot,seed);
+    else if(kind==='cypress')tree(L.cypress,b.x,b.y,z,8+u*5,1.0,rot,seed);
+    else if(kind==='rock'){const ht=0.5+u*1.1;L.rock.push({x:b.x,y:b.y,z:z+ht*0.3,sx:ht*1.3,sy:ht*1.0,sz:ht*0.7,rot,c:sc.rock});}
+    else if(kind==='bush'){L.bush.push({x:b.x,y:b.y,z:z+b.h*0.4,sx:b.r,sy:b.r,sz:b.h*0.55,rot,c:sc.bush});}});
+  /* Woodland: trees scattered over the land wherever the forest mask says so –
+     on a jittered 10 m grid, up to 650 m from the track, never on the road
+     corridor. Spruce where it is cold or northern, broad-leaved and pine in
+     the south. With instancing this is one draw call per model. */
+  if(sc.forest){const lfd=landField();let cnt=0;const CAP=14000,G=10;
+    for(let gy=y0+M-650;gy<y1-M+650&&cnt<CAP;gy+=G)for(let gx=x0+M-650;gx<x1-M+650&&cnt<CAP;gx+=G){
+      const r1=vhash(gx|0,gy|0,91),r2=vhash(gx|0,gy|0,92),r3=vhash(gx|0,gy|0,93);const x=gx+(r1-0.5)*G*0.9,y=gy+(r2-0.5)*G*0.9;
+      const dr=lfSample(lfd.dist,lfd,x,y);if(dr===null||dr<26||dr>650)continue;const m=sc.forest*landF(x,y);if(m<0.46||r3>clamp((m-0.46)/0.08,0,1)*0.85)continue;
+      const z=landH(x,y),u=vhash(gx|0,gy|0,94),seed=(gx*31+gy*17)|0;cnt++;
+      if(cfg.surface!=='tarmac'||u<0.35)tree(L.spruce,x,y,z,9+u*10,0.85+0.2*u,u*6.28,seed);
+      else if(u<0.7)tree(L.broad,x,y,z,7+u*6,1.05,u*6.28,seed);else tree(L.pine,x,y,z,9+u*6,1.0,u*6.28,seed);}}
+  const vmat=()=>new THREE.MeshLambertMaterial({vertexColors:true});
+  inst(spruceG(!!sc.snowCap),vmat(),L.spruce);inst(broadG(sc.snowCap?'#5e6468':sc.crown,sc.trunk),vmat(),L.broad);inst(pineG,vmat(),L.pine);
+  inst(birchG(!!sc.snowCap),vmat(),L.birch);inst(cypressG,vmat(),L.cypress);
+  inst(rockG,new THREE.MeshLambertMaterial(),L.rock);inst(blob,new THREE.MeshLambertMaterial(),L.bush);
+  // sky dome and mountains: they move with the camera, so they stay at infinity
+  {const g=new THREE.SphereGeometry(20000,32,16);g.rotateX(Math.PI/2);const c=new Float32Array(g.attributes.position.count*3);const top=rgbOf(sc.skyTop),hor=rgbOf(sc.skyHor),hz=rgbOf(sc.haze);
+   for(let k=0;k<g.attributes.position.count;k++){const z=g.attributes.position.getZ(k)/20000;let t=clamp(z/0.6,0,1),r,gg,b;if(z>=0){t=Math.pow(t,0.6);r=hor[0]+(top[0]-hor[0])*t;gg=hor[1]+(top[1]-hor[1])*t;b=hor[2]+(top[2]-hor[2])*t;}else{r=hz[0];gg=hz[1];b=hz[2];}c[k*3]=lin(r);c[k*3+1]=lin(gg);c[k*3+2]=lin(b);}
+   g.setAttribute('color',new THREE.BufferAttribute(c,3));GL.sky=glAdd(new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false})));GL.sky.renderOrder=-2;}
+  {const R=15000,Lr=ridgesFor(sc)[0],n=1600,I=[];let P,Cc;const rc=rgbOf(mixCol(sc.ridges[0],sc.skyHor,(sc.ridgeFade||[0.4])[0])),sn=rgbOf(mixCol('#e6e8ea',sc.skyHor,0.35));const snowLine=Lr.base*0.95*Math.PI/180;
+   // three rows per azimuth: peak, snow line, foot – snow only above the snow line (a two-row strip drew white columns down to the foot)
+   P=new Float32Array(n*3*3);Cc=new Float32Array(n*3*3);
+   for(let k=0;k<n;k++){const a=k/n*Math.PI*2,e=ridgeElev(Lr,a),ca=Math.cos(a)*R,sa2=Math.sin(a)*R,em=Math.min(e,snowLine);
+     P.set([ca,sa2,Math.tan(e)*R,ca,sa2,Math.tan(em)*R,ca,sa2,-R*0.01],k*9);
+     const top=e>snowLine&&cfg.surface!=='gravel'?sn:rc;Cc.set([lin(top[0]),lin(top[1]),lin(top[2]),lin(rc[0]),lin(rc[1]),lin(rc[2]),lin(rc[0]),lin(rc[1]),lin(rc[2])],k*9);
+     const a3=k*3,b3=((k+1)%n)*3;I.push(a3,a3+1,b3+1,a3,b3+1,b3,a3+1,a3+2,b3+2,a3+1,b3+2,b3+1);}
+   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('color',new THREE.BufferAttribute(Cc,3));g.setIndex(new THREE.Uint32BufferAttribute(I,1));
+   GL.mtn=glAdd(new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,fog:false,depthWrite:false})));GL.mtn.renderOrder=-1;}
+  GL.decor=glAdd(glSkyDecor(sc));
+}
+function cloudTex(){if(GL.ctex)return GL.ctex;const n=128,c=document.createElement('canvas');c.width=n;c.height=n/2;const g=c.getContext('2d');
+  for(let k=0;k<14;k++){const x=n*(0.2+0.6*Math.random()),y=n/4+(Math.random()-0.5)*n*0.12,r=n*(0.08+0.12*Math.random());const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(255,255,255,0.55)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,n,n/2);}
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return GL.ctex=t;}
+function glSkyDecor(sc){const grp=new THREE.Group();
+  // soft flat clouds high and far, and a glow where the sun stands
+  const cols=col3(mixCol(sc.cloud,sc.skyHor,0.15));for(const c of cloudsFor(sc)){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:cloudTex(),color:cols,transparent:true,opacity:0.75,fog:false,depthWrite:false}));
+    const R=9000,el=(c.el*0.7)*Math.PI/180;sp.position.set(Math.cos(c.az)*R,Math.sin(c.az)*R,Math.tan(el)*R);sp.scale.set(R*c.w*0.035,R*c.w*0.012,1);grp.add(sp);}
+  {const n=128,cc=document.createElement('canvas');cc.width=cc.height=n;const g=cc.getContext('2d');const gr=g.createRadialGradient(n/2,n/2,0,n/2,n/2,n/2);gr.addColorStop(0,'rgba(255,248,230,0.9)');gr.addColorStop(0.15,'rgba(255,240,210,0.35)');gr.addColorStop(1,'rgba(255,240,210,0)');g.fillStyle=gr;g.fillRect(0,0,n,n);
+   const t=new THREE.CanvasTexture(cc);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,fog:false,depthWrite:false,blending:THREE.AdditiveBlending}));const R=9000,sa=GL_SUN.az,se=GL_SUN.el;sp.position.set(Math.cos(sa)*R*Math.cos(se),Math.sin(sa)*R*Math.cos(se),Math.sin(se)*R);sp.scale.set(3200,3200,1);grp.add(sp);}
+  grp.renderOrder=-1;return grp;}
+/* Light shafts (crepuscular rays), the usual screen-space way: the sun disc
+   and everything that can hide it – land, trees, mountains, in black – are
+   drawn into a small off-screen image; a radial blur towards the sun's
+   position on screen smears the bright gaps between the trunks and crowns
+   into shafts, and the result is added onto the picture. Only while the sun
+   is in or near the view. */
+function glRaysInit(){if(GL.rays)return GL.rays;const R={};
+  R.rt=new THREE.WebGLRenderTarget(256,256,{depthBuffer:true});R.black=new THREE.MeshBasicMaterial({color:0x000000,fog:false});
+  R.sunScene=new THREE.Scene();{const n=64,c=document.createElement('canvas');c.width=c.height=n;const g=c.getContext('2d');const gr=g.createRadialGradient(n/2,n/2,0,n/2,n/2,n/2);gr.addColorStop(0,'rgba(255,255,255,1)');gr.addColorStop(0.35,'rgba(255,255,255,0.9)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,n,n);
+    R.sun=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),fog:false,depthWrite:false,depthTest:false}));R.sun.scale.set(900,900,1);R.sunScene.add(R.sun);}
+  R.mat=new THREE.ShaderMaterial({uniforms:{tDiff:{value:R.rt.texture},sunUV:{value:new THREE.Vector2(0.5,0.5)},strength:{value:0},tint:{value:new THREE.Color(1,0.93,0.8)}},
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}',
+    fragmentShader:'uniform sampler2D tDiff;uniform vec2 sunUV;uniform float strength;uniform vec3 tint;varying vec2 vUv;'+
+      'void main(){vec2 uv=vUv;vec2 d=(uv-sunUV)*(0.92/56.0);float il=1.0;vec3 c=vec3(0.0);'+
+      'for(int i=0;i<56;i++){uv-=d;c+=texture2D(tDiff,clamp(uv,0.0,1.0)).rgb*il;il*=0.965;}'+
+      'gl_FragColor=vec4(c*(strength/56.0)*tint,1.0);}',
+    blending:THREE.AdditiveBlending,depthTest:false,depthWrite:false,transparent:true});
+  R.quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),R.mat);R.scene=new THREE.Scene();R.scene.add(R.quad);R.cam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+  return GL.rays=R;}
+function glRays(){const R=glRaysInit(),C=cam3,r=GL.renderer;
+  const sd=new THREE.Vector3(Math.cos(GL_SUN.az)*Math.cos(GL_SUN.el),Math.sin(GL_SUN.az)*Math.cos(GL_SUN.el),Math.sin(GL_SUN.el));
+  const sp=new THREE.Vector3(C.ex,C.ey,C.ez).addScaledVector(sd,9000);const ndc=sp.clone().project(GL.cam);
+  const inFront=sd.x*C.fx+sd.y*C.fy+sd.z*C.fz>0.05;
+  const out=Math.max(Math.abs(ndc.x),Math.abs(ndc.y));const vis=inFront?clamp((1.6-out)/0.6,0,1):0;
+  if(vis<=0)return;
+  const w=Math.max(64,Math.round(GL.w/4)),h=Math.max(64,Math.round(GL.h/4));if(R.rt.width!==w||R.rt.height!==h)R.rt.setSize(w,h);
+  R.sun.position.copy(sp);
+  r.setRenderTarget(R.rt);r.setClearColor(0x000000,1);r.clear();r.render(R.sunScene,GL.cam);
+  const hide=[GL.sky,GL.decor];hide.forEach(o=>o.visible=false);const ac=r.autoClear;r.autoClear=false;GL.scene.overrideMaterial=R.black;
+  r.clearDepth();r.render(GL.scene,GL.cam);GL.scene.overrideMaterial=null;hide.forEach(o=>o.visible=true);
+  r.setRenderTarget(null);R.mat.uniforms.sunUV.value.set((ndc.x+1)/2,(ndc.y+1)/2);R.mat.uniforms.strength.value=(cfg.daylight?0.75:0.95)*vis;
+  R.mat.uniforms.tint.value=cfg.daylight?new THREE.Color(1,0.95,0.85):new THREE.Color(1,0.8,0.6);
+  r.render(R.scene,R.cam);r.autoClear=ac;}
+function glRender(){
+  if(!glInit())return false;
+  const key=[TRACK.name,TRACK.N,cfg.surface,cfg.daylight,cfg.driven,cfg.profile].join('|');if(GL.key!==key||GL.track!==TRACK){glBuild();GL.key=key;GL.track=TRACK;}
+  const W=cv.width,H=cv.height;if(GL.w!==W||GL.h!==H){GL.renderer.setSize(W,H,false);GL.w=W;GL.h=H;}
+  const C=cam3,cam=GL.cam,n=0.3,fr=40000;
+  cam.projectionMatrix.makePerspective(-C.cxp/C.f*n,(W-C.cxp)/C.f*n,C.cyp/C.f*n,-(H-C.cyp)/C.f*n,n,fr);cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+  // view matrix straight from the 2D camera's basis: rows right, up, −forward
+  const v=cam.matrixWorldInverse;v.set(C.rx,C.ry,C.rz,-(C.rx*C.ex+C.ry*C.ey+C.rz*C.ez),C.ux,C.uy,C.uz,-(C.ux*C.ex+C.uy*C.ey+C.uz*C.ez),-C.fx,-C.fy,-C.fz,(C.fx*C.ex+C.fy*C.ey+C.fz*C.ez),0,0,0,1);
+  cam.matrixWorld.copy(v).invert();
+  GL.sky.position.set(C.ex,C.ey,C.ez);GL.mtn.position.set(C.ex,C.ey,0);GL.decor.position.set(C.ex,C.ey,C.ez);GL.sky.updateMatrixWorld();GL.mtn.updateMatrixWorld();GL.decor.updateMatrixWorld(true);
+  GL.renderer.render(GL.scene,cam);
+  if(cfg.sunRays!==false)glRays();
+  return true;
+}
+function draw(){ const g3=glActive();const c3=document.getElementById('world3d');if(c3)c3.style.display=g3?'block':'none';
+  cfg.view==='top'?drawTopDown():(g3?drawPerspective3D():drawPerspective()); if(cfg.view==='top')drawOffTrackHint(cv.width,cv.height); drawStuckHint(cv.width,cv.height); drawTouchUI(); drawSteerHUD(); drawThumbKnob(); }
 
 /* ═══════════ Steering-wheel display below the view ═══════════
    Shows the steering-wheel angle, not the road-wheel angle – that is the
@@ -2047,34 +2476,87 @@ function drawTouchUI(){
    the tutor switches on with hysteresis: in when the excess exceeds 9 °/s
    with the rear axle beyond its peak, out when it has fallen below 3 °/s.
    Nothing is shown while the car is stable, and nothing touches the input. */
-let TUT_ON=false,TUT_LAST=null,TUT_PHASE='',TUT_T=0,TUT_BRK=0,TUT_LEAD=0.25;
+let TUT_ON=false,TUT_LAST=null,TUT_PHASE='',TUT_T=0,TUT_BRK=0,TUT_LEAD=0.25,TUT_BIAS=0;
+/* ═══════════ Tutor: stability and navigation in one recommendation ═══════════
+   The recommendation is the road-wheel angle that makes the car follow the
+   road on the line the driver has chosen, with the car settled on it:
+
+   1. Where to go. The driver's own lateral position on the road, and the
+      way he is moving across it, are kept – on the line, wide, tight, in the
+      middle of the skidpad, or moving between them – limited only to the
+      road with a metre to spare. A point that far from the centre,
+      a look-ahead distance down the road (0.9 s of travel, 8–32 m), is the
+      aim. The path curvature that reaches it from the car's direction of
+      TRAVEL (not its heading, so a drift angle is kept, not corrected away)
+      is κ = 2·sin(α)/L.
+
+   2. The wheel angle for that curvature – in grip as a steady-state
+      feed-forward, in a slide from the front axle's direction of travel with
+      a correction against the rotation (details below), blended by the
+      slip angle.
+
+   On the road with the car settled this is the wheel angle the driver
+   already has; the marks only move when the road bends ahead, when the car
+   leaves its line, or when it starts to rotate.
+   The band is shown when the recommendation differs from the wheel by more
+   than 16° at the steering wheel, or while a slide is growing. */
 function tutorAdvice(){
   const v=Math.hypot(S.vx,S.vy);if(v<4){TUT_ON=false;TUT_PHASE='';return null;}
-  /* The tutor stabilises the car on the path the driver has chosen – it does
-     not know or care about the ideal line, the radius or the drift angle the
-     driver wants. Its only measure is the yaw the car cannot sustain on its
-     current path: excess = r − ay/v, the rate at which the slip angle is
-     changing. Zero means the car is settled, at any slip angle – a held drift
-     in the middle of the skidpad is as stable as grip driving on the line.
-     When a slide grows (|β| > 3°, growing faster than 8 °/s) it shows the
-     correction; as the slide shrinks it shows how far to unwind; below 4° of
-     slip, or once the car has settled into a held drift, it goes quiet. */
+  const T=TRACK,N=T.N,pn=T.pts[S.idx];
+  // 1) aim point: same lateral offset as now, limited to the road
+  const n0=(S.x-pn.x)*pn.nx+(S.y-pn.y)*pn.ny;
+  const L=clamp(0.9*v,8,32);let idx=S.idx,dist=0;while(dist<L){dist+=T.pts[idx].seg;idx=(idx+1)%N;}
+  const cvx=S.vx*Math.cos(S.psi)-S.vy*Math.sin(S.psi),cvy=S.vx*Math.sin(S.psi)+S.vy*Math.cos(S.psi);   // velocity in the world
+  /* The driver's line, continued: his offset from the centre plus the rate at
+     which he is moving across the road, carried to the look-ahead – so a
+     driver deliberately moving to a tighter or wider line is followed, not
+     corrected. Only the road's edges (a metre to spare) limit it. */
+  const vn=dsp('tutVn',cvx*pn.nx+cvy*pn.ny,0.25);
+  const q=T.pts[idx],nq=clamp(n0+vn*(L/Math.max(v,1)),-(q.w-1.0),q.w-1.0);
+  const ax=q.x+q.nx*nq,ay=q.y+q.ny*nq;
+  const dirV=Math.atan2(cvy,cvx);let al=Math.atan2(ay-S.y,ax-S.x)-dirV;al=Math.atan2(Math.sin(al),Math.cos(al));
+  const Ld=Math.hypot(ax-S.x,ay-S.y),kap=2*Math.sin(al)/Math.max(Ld,4);
+  // slide phase
   const beta=Math.atan2(S.vy,Math.abs(S.vx)), ab=Math.abs(beta);
   const dAb=dsp('tutDb',(ab-(DISP.tutAbPrev===undefined?ab:DISP.tutAbPrev))*60,0.08);DISP.tutAbPrev=ab;
-  const excess=dsp('tutEx',S.r-S.ay/Math.max(v,1),0.06);
-  if(!TUT_ON){if(ab>3/57.3&&dAb>8/57.3){TUT_ON=true;TUT_PHASE='catch';}}
-  else{if(ab<4/57.3||(Math.abs(excess)<3/57.3&&Math.abs(dAb)<3/57.3)){TUT_ON=false;TUT_PHASE='';}else TUT_PHASE=dAb>2/57.3?'catch':'unwind';}
-  if(!TUT_ON)return {on:false};
-  /* Target: the neutral steer – front wheels along the front axle's own
-     direction of travel, θf = atan2(vy + a·r, vx), where the front axle adds
-     no yaw – against the excess, 0.3° per °/s. Both are properties of the car
-     on its current path: no line, no radius, no preferred drift angle. While
-     the slide grows this is the counter-steer; as it shrinks the same mark
-     moves back ahead of the car, which is what makes a driver unwind in time
-     instead of being thrown the other way. */
-  const thF=dsp('tutThF',Math.atan2(S.vy+CAR.a*S.r,S.vx),0.04);
-  const target=clamp(thF-0.30*excess,-CAR.maxSteer,CAR.maxSteer);
-  return {target,excess,word:TUT_PHASE==='catch'?'counter-steer':'unwind',on:true,phase:TUT_PHASE};
+  if(TUT_PHASE===''&&ab>3/57.3&&dAb>8/57.3)TUT_PHASE='catch';
+  else if(TUT_PHASE!==''&&ab<4/57.3)TUT_PHASE='';
+  else if(TUT_PHASE!=='')TUT_PHASE=dAb>2/57.3?'catch':'unwind';
+  /* 2a) Gripping: the steady-state wheel angle for that curvature – the
+     geometric angle (a+b)·κ plus the car's understeer, K·ay, with K the
+     measured understeer gradient on this surface (1.5 / 3 / 5 °/g). A
+     feed-forward that a driver reacting late can follow without the car
+     starting to weave. */
+  const sur=SURF[cfg.surface],mu=sur.mu*(cfg.driven&&LINE?gripFactor(S.idx,n0):1);
+  const Kus=({tarmac:1.5,gravel:3.0,snow:5.0}[cfg.surface]||3)/57.3/9.81;
+  const ayDes=clamp(v*v*kap,-mu*9.81,mu*9.81);
+  const ffw=k=>Math.atan((CAR.a+CAR.b)*k)+Kus*clamp(v*v*k,-mu*9.81,mu*9.81);
+  /* The feed-forward is calibrated against the car itself: whenever the car
+     is settled (no slide, yaw matching the path), the difference between the
+     wheel angle the driver holds and the feed-forward for the curvature the
+     car is actually driving is learned (1.5 s). So on a steady line – any
+     line – the recommendation equals what the driver does, and only the
+     change the road ahead needs shows up. */
+  if(!TUT_PHASE&&v>8&&Math.abs(S.r-S.ay/v)<2/57.3)TUT_BIAS+=(S.delta-ffw(S.ay/(v*v))-TUT_BIAS)*Math.min(1,(1/60)/1.5);
+  const dGrip=ffw(kap)+TUT_BIAS;
+  /* 2b) Sliding: the front wheels along the front axle's own direction of
+     travel, θf = atan2(vy + a·r, vx), against the yaw the car cannot sustain
+     on its path, 0.3° per °/s. */
+  const thF=Math.atan2(S.vy+CAR.a*S.r,S.vx);
+  const excess=S.r-S.ay/Math.max(v,1);
+  const dSlide=thF-0.30*excess;   // in a slide stability comes first; the path is followed through the yaw the car can sustain
+  // blend by the slip angle, so the recommendation never jumps between the two
+  const wS=TUT_PHASE?clamp((ab-2/57.3)/(4/57.3),0,1):0;
+  const target=clamp(dsp('tutTgt',dGrip+(dSlide-dGrip)*wS,0.05),-CAR.maxSteer,CAR.maxSteer);
+  // when to show the band: a real difference at the wheel (with hysteresis), or a growing slide
+  const diffW=dsp('tutDiff',Math.abs(target-S.delta)*CAR.ratio*57.3,0.15);   // filtered, so the driver's own small corrections do not switch it
+  if(!TUT_ON&&(diffW>16||TUT_PHASE==='catch'))TUT_ON=true;
+  else if(TUT_ON&&diffW<8&&TUT_PHASE!=='catch')TUT_ON=false;
+  if(!TUT_ON)return {on:false,target};
+  let word='';
+  if(TUT_PHASE==='catch')word='counter-steer';else if(TUT_PHASE==='unwind')word='unwind';
+  else word=Math.abs(target)>Math.abs(S.delta)?'more lock':'less lock';
+  return {target,word,on:true,phase:TUT_PHASE||'steer'};
 }
 function drawSteerHUD(){
   if(!cfg.steerHud)return;
@@ -2262,8 +2744,15 @@ function clipPoly(P){
   }
   return out;
 }
+/* Render debug (key J): every surface is tinted by the pass that drew it –
+   far band and forest blue, track parts outside the road window magenta,
+   the road window itself green. Whatever builds up or pops shows its colour,
+   which tells where it comes from. */
+let RDBG=false,PASS='';
+const PASS_TINT={far:'#3a6cff',outside:'#ff3ad0',window:'#2fd06a'};
 function fillCam(P,style,seam){
   const C=clipPoly(P); if(C.length<3)return;
+  if(RDBG&&PASS_TINT[PASS])style=mixCol(typeof style==='string'&&style[0]!=='r'?style:'#808080',PASS_TINT[PASS],0.6);
   cx.fillStyle=style; cx.beginPath();
   for(let m=0;m<C.length;m++){const s=proj(C[m]); m?cx.lineTo(s[0],s[1]):cx.moveTo(s[0],s[1]);}
   cx.closePath(); cx.fill();
@@ -2303,25 +2792,35 @@ const SCENE={
 /* Daylight variants of the same three countries: an afternoon with high
    cloud, olive and green ground, colours instead of silhouettes. Dusk remains
    available (Optical flow → Daylight off). */
+/* Daylight, natural. The earlier day palette was saturated and flat – every
+   plane the same strength, every tree a lollipop – and read as a toy
+   landscape. This one works with values instead of hues: a pale, slightly
+   warm horizon and a muted sky, strong aerial perspective (each distance
+   layer lighter and greyer than the one in front), desaturated vegetation
+   that is darker than the ground it stands on, forest as masses with ragged
+   edges rather than single trees, flat high cloud instead of white puffs. */
 const SCENE_DAY={
-  tarmac:{skyTop:'#3e5f90',skyHor:'#c3beb4',sun:'rgba(255,240,210,',haze:'#b0aea8',hazeL:650,gFar:'#8f8c7c',gNear:'#5c5c4f',verge:'#66604f',
-          ridges:['#8a97aa'],ridgeShape:[[4.2,2.0,1.15]],ridgeFade:[0.30],
-          veg:{cypress:0.18,pine:0.16,decid:0.16,conifer:0.04,rock:0.22,birch:0,barn:0.012},tree:'#25432b',crown:'#4d7232',trunk:'#4e3d2c',rock:'#8d857a',bush:'#4a5632',snowCap:false,bank:false,
-          meadow:'#7c8e46',field:'#a07c46',cloud:'#ecebe6',cloudLit:'#ffffff',cloudN:6,cloudLow:false,treeline:false,barnWall:'#b07a5a',barnRoof:'#5a4a40'},
-  gravel:{skyTop:'#4a6c98',skyHor:'#bdb49c',sun:'rgba(255,236,200,',haze:'#aea48f',hazeL:520,gFar:'#8e8c6c',gNear:'#4c4c34',verge:'#5c5538',
-          ridges:['#7f8ea4'],ridgeShape:[[2.6,1.3,1.15]],ridgeFade:[0.35],
-          veg:{conifer:0.24,pine:0.16,birch:0.18,decid:0.10,rock:0.10,cypress:0,barn:0.015},tree:'#1f3b24',crown:'#416c2e',trunk:'#4c3c2b',rock:'#7c746a',bush:'#3e4c2c',snowCap:false,bank:false,
-          meadow:'#6e7c3c',field:'#8e6c3c',cloud:'#e9e6df',cloudLit:'#fff6e8',cloudN:8,cloudLow:false,treeline:false,barnWall:'#8a3a2c',barnRoof:'#4a4440'},
-  snow:  {skyTop:'#6b8bb2',skyHor:'#e0e5eb',sun:'rgba(255,255,255,',haze:'#d2d9e0',hazeL:420,gFar:'#eaeef2',gNear:'#c9d0d7',verge:'#cfd5dc',
-          ridges:['#c6ced8'],ridgeShape:[[2.0,1.0,1.15]],ridgeFade:[0.35],
-          veg:{conifer:0.56,birch:0.20,decid:0.04,rock:0,cypress:0,pine:0,barn:0.012},tree:'#1f3627',crown:'#5c6872',trunk:'#3c322a',rock:'#9ca4ae',bush:'#5f6b63',snowCap:true,bank:true,
-          meadow:'#dadfe5',field:'#cfd5db',cloud:'#f4f6f8',cloudLit:'#ffffff',cloudN:10,cloudLow:true,treeline:false,barnWall:'#8a3a2c',barnRoof:'#e2e7ec'}
+  tarmac:{skyTop:'#7b93ae',skyHor:'#dcd6c9',sun:'rgba(255,246,226,',haze:'#cfc9bb',hazeL:420,gFar:'#9d9580',gNear:'#5b5545',verge:'#6c6450',
+          ridges:['#97a0ad'],ridgeShape:[[4.2,2.0,1.15]],ridgeFade:[0.42],
+          veg:{cypress:0.16,pine:0.18,decid:0.18,conifer:0.06,rock:0.16,birch:0,barn:0},tree:'#29322b',crown:'#3e4732',trunk:'#3b332b',rock:'#8b8579',bush:'#454a36',snowCap:false,bank:false,
+          meadow:'#7d7a58',field:'#8f7d5c',cloud:'#e6e4dc',cloudLit:'#f2f0ea',cloudN:7,cloudLow:false,treeline:false,forest:0.35,barnWall:'#7a6a5a',barnRoof:'#4a4440'},
+  gravel:{skyTop:'#7d8fa2',skyHor:'#d6d5cb',sun:'rgba(255,246,228,',haze:'#c6c6bb',hazeL:330,gFar:'#8d907a',gNear:'#46483a',verge:'#585743',
+          ridges:['#94a0a9'],ridgeShape:[[2.6,1.3,1.15]],ridgeFade:[0.5],
+          veg:{conifer:0.30,pine:0.18,birch:0.16,decid:0.08,rock:0.08,cypress:0,barn:0},tree:'#1f2923',crown:'#34402f',trunk:'#3a3129',rock:'#76726a',bush:'#3a4133',snowCap:false,bank:false,
+          meadow:'#687050',field:'#7b6d52',cloud:'#dedfd9',cloudLit:'#ecebe5',cloudN:9,cloudLow:false,treeline:false,forest:0.8,barnWall:'#6a3a30',barnRoof:'#45403c'},
+  snow:  {skyTop:'#97a5b5',skyHor:'#e4e7ea',sun:'rgba(255,255,255,',haze:'#d9dde1',hazeL:260,gFar:'#e3e6ea',gNear:'#bcc3ca',verge:'#c8cdd3',
+          ridges:['#b9c1ca'],ridgeShape:[[2.0,1.0,1.15]],ridgeFade:[0.45],
+          veg:{conifer:0.58,birch:0.18,decid:0.04,rock:0,cypress:0,pine:0,barn:0},tree:'#1e2823',crown:'#4f565b',trunk:'#2e2924',rock:'#9aa1aa',bush:'#626a64',snowCap:true,bank:true,
+          meadow:'#d7dbdf',field:'#ced3d8',cloud:'#eef0f2',cloudLit:'#f7f8f9',cloudN:12,cloudLow:true,treeline:false,forest:0.9,barnWall:'#6a3a30',barnRoof:'#e0e4e8'}
 };
 function sceneFor(){if(!cfg.scenery)return null;const t=cfg.daylight?SCENE_DAY:SCENE;return t[cfg.surface]||t.gravel;}
 const _rgb={};function rgbOf(h){if(_rgb[h])return _rgb[h];
   if(h[0]==='#'){const n=parseInt(h.slice(1),16);return _rgb[h]=[n>>16&255,n>>8&255,n&255];}
   const m=h.match(/(\d+)[, ]+(\d+)[, ]+(\d+)/);return _rgb[h]=m?[+m[1],+m[2],+m[3]]:[0,0,0];}   // also 'rgb(r,g,b)' from an earlier mix
-function mixCol(a,b,f){const A=rgbOf(a),B=rgbOf(b);return 'rgb('+Math.round(A[0]+(B[0]-A[0])*f)+','+Math.round(A[1]+(B[1]-A[1])*f)+','+Math.round(A[2]+(B[2]-A[2])*f)+')';}
+const _mix=new Map();
+function mixCol(a,b,f){const fq=Math.round(f*50)/50,key=a+'|'+b+'|'+fq;let r=_mix.get(key);if(r)return r;   // quantised to 2 %, cached: no new strings every frame
+  const A=rgbOf(a),B=rgbOf(b);r='rgb('+Math.round(A[0]+(B[0]-A[0])*fq)+','+Math.round(A[1]+(B[1]-A[1])*fq)+','+Math.round(A[2]+(B[2]-A[2])*fq)+')';
+  if(_mix.size>20000)_mix.clear();_mix.set(key,r);return r;}
 const _hz={};
 function hazed(col,sc,d){if(!sc)return col;const b=Math.min(60,Math.round(Math.max(0,d)/8));const key=col+'|'+sc.haze+'|'+b;   // 8 m buckets, cached: the same string every frame
   return _hz[key]||(_hz[key]=mixCol(col,sc.haze,1-Math.exp(-b*8/sc.hazeL)));}
@@ -2334,7 +2833,11 @@ function ridgesFor(sc){const key=JSON.stringify(sc.ridgeShape);if(_ridgeCache[ke
     // jagged ranges: a chain of peaks with straight flanks instead of a sum of sines
     const peaks=[];if(jag>1.1){const n=22;for(let k=0;k<n;k++)peaks.push([k/n*6.283+rnd()*0.2,base*(0.55+0.9*rnd()),0.07+0.16*rnd()]);}
     return {base,terms,jag,peaks};});}
-function ridgeElev(L,a){let e;
+/* Ridge elevations are tabulated once per layer (4096 azimuths over a full
+   turn) – evaluated directly they cost a sixth of the frame. */
+function ridgeElev(L,a){if(!L.tab){L.tab=new Float32Array(4097);for(let i=0;i<=4096;i++)L.tab[i]=ridgeElevRaw(L,i/4096*Math.PI*2);}
+  let u=(a/(Math.PI*2))%1;if(u<0)u+=1;const x=u*4096,i=Math.floor(x),f=x-i;return L.tab[i]+(L.tab[i+1]-L.tab[i])*f;}
+function ridgeElevRaw(L,a){let e;
   if(L.peaks.length){e=L.base*0.28;for(const [c,A,w] of L.peaks){let d=a-c;d=Math.atan2(Math.sin(d),Math.cos(d));const t=1-Math.abs(d)/w;if(t>0)e=Math.max(e,L.base*0.28+A*Math.pow(t,1.15));}
     for(const [fr,am,ph] of L.terms)e+=0.15*am*Math.sin(fr*a+ph);}
   else{e=L.base;for(const [fr,am,ph] of L.terms)e+=am*Math.sin(fr*a+ph);}
@@ -2361,6 +2864,13 @@ function cloudsFor(sc){const key=sc.cloudN+'|'+sc.cloudLow;if(_clouds[key])retur
   return _clouds[key]=arr;}
 function drawClouds(sc){
   const D=60000,psi=Math.atan2(cam3.fy,cam3.fx),sunAz=3.5;
+  if(cfg.daylight){   // flat, translucent high cloud: long thin layers that barely separate from the sky
+    for(const c of cloudsFor(sc)){let da=c.az-psi;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)>1.6)continue;
+      const base=toCam(cam3.ex+Math.cos(c.az)*D,cam3.ey+Math.sin(c.az)*D,D*Math.tan(c.el*Math.PI/180));if(base.z<NEAR)continue;const q=proj(base);
+      const px=cam3.f*(c.w*1.8*Math.PI/180),py=cam3.f*(c.h*0.35*Math.PI/180);
+      for(let k=0;k<6;k++){const u=((c.r*977+k*131)%100)/100;cx.globalAlpha=0.18+0.22*u;cx.fillStyle=mixCol(sc.cloud,sc.skyHor,0.2);
+        cx.beginPath();cx.ellipse(q[0]+(u-0.5)*px*1.2,q[1]+(k-2.5)*py*0.45,px*(0.35+0.4*u),py*(0.5+0.4*((k*7)%3)/2),0,0,7);cx.fill();}}
+    cx.globalAlpha=1;return;}
   for(const c of cloudsFor(sc)){let da=c.az-psi;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)>1.5)continue;
     const base=toCam(cam3.ex+Math.cos(c.az)*D,cam3.ey+Math.sin(c.az)*D,D*Math.tan(c.el*Math.PI/180));if(base.z<NEAR)continue;const q=proj(base);
     const px=cam3.f*(c.w*Math.PI/180),py=cam3.f*(c.h*Math.PI/180)*0.5;
@@ -2424,24 +2934,28 @@ function collectGroundMarks(W,H,bins,far){
   const bands=[[1.6,2.0,26,0.050,snowy?'#46505b':'#5a5145'],[5.5,26,86,0.17,snowy?'rgba(62,72,84,0.72)':'rgba(75,67,56,0.72)'],
                [20,86,320,0.60,snowy?'rgba(72,82,94,0.42)':'rgba(66,59,49,0.42)']];
   const N=TRACK.N,w=trackWindow();
-  for(let bi=0;bi<3;bi++){
+  for(let bi=0;bi<(DETAIL.lvl>=1?2:3);bi++){   // detail level 1+: the far texture band (86–320 m) is left out
     const g=bands[bi][0],r0=bands[bi][1],r1=bands[bi][2],sz=bands[bi][3],col=bands[bi][4];
     const r02=r0*r0,r12=r1*r1;
     const i0=Math.floor((cam3.ex-r1)/g),i1=Math.ceil((cam3.ex+r1)/g);
     const j0=Math.floor((cam3.ey-r1)/g),j1=Math.ceil((cam3.ey+r1)/g);
+    const rIn=Math.max(0,r0-g*1.5),rOut=r1+g*1.5,rIn2=rIn*rIn,rOut2=rOut*rOut;
     for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){
+      // cheap rejection by the cell centre before any hashing: outside the ring or well behind the driver
+      const ccx=(i+0.5)*g-cam3.ex,ccy=(j+0.5)*g-cam3.ey,cd2=ccx*ccx+ccy*ccy;if(cd2<rIn2||cd2>rOut2)continue;if(ccx*cam3.fx+ccy*cam3.fy<-g*1.5)continue;
       const hv=h2(i,j,3); if(hv<0.22)continue;               // just under a fifth of the cells empty – no grid pattern
       const x=(i+h2(i,j,1))*g,y=(j+h2(i,j,2))*g;
       const dx=x-cam3.ex,dy=y-cam3.ey,d2=dx*dx+dy*dy;
       if(d2<r02||d2>r12)continue;
       if(dx*cam3.fx+dy*cam3.fy<0)continue;             // behind the driver
       let zg=0,k=0;
-      if(TRACK.hasZ){const idx=nearestIdxWide(x,y,S.idx,170);zg=trackZ(x,y,idx);k=idx-S.idx;if(k>N/2)k-=N;if(k<-N/2)k+=N;}
+      if(TRACK.hasZ){const idx=nearestIdxWide(x,y,S.idx,170);zg=groundHeight(x,y,idx);k=idx-S.idx;if(k>N/2)k-=N;if(k<-N/2)k+=N;}
       const c=toCam(x,y,zg); if(c.z<NEAR)continue;
       const sc=cam3.f*sz*(0.6+0.8*h2(i,j,4))/c.z; if(sc<0.95)continue;   // size varies 0.6–1.4
       const pr=proj(c);
       if(pr[0]<-12||pr[0]>W+12||pr[1]<-12||pr[1]>H+12)continue;
-      const m={p:pr,q:Math.min(sc,8),a:0.55+0.45*h2(i,j,5),col,pp:null};
+      const fadeR=clamp((r1-Math.sqrt(d2))/(r1*0.25),0,1);   // marks fade in over the outer quarter of their band instead of appearing
+      const m={p:pr,q:Math.min(sc,8),a:(0.55+0.45*h2(i,j,5))*fadeR,col,pp:null};
       // streak only when the mark was comfortably in front of the previous camera too: a point just inside the near plane projects to the edge of the world
       if(bi<2&&camPrev){const cp=toCam(x,y,zg,camPrev);if(cp.z>=1.5)m.pp=proj(cp,camPrev);}
       if(k<-w.back||k>=w.ahead)far.push(m);else{(bins[k+w.back]||(bins[k+w.back]=[])).push(m);}
@@ -2496,25 +3010,7 @@ function drawRoadPass(sur,W,H){
      bands (34–130 m, 130–320 m) and the verge (edge–34 m). */
   const terrainSeg=(a,b,ax,ay,bx,by,dSeg,fade,withVerge)=>{
     for(const side of [1,-1]){
-      if(SC&&dSeg<480){const kS=q=>Math.sin(q.s*0.0052+0.8);
-        const hill=(q,sd)=>q.z*0.6+sd*kS(q)*9+3+3*Math.sin(q.s*0.031+sd*0.7);
-        const farZ=(q,sd)=>q.z*0.3+sd*kS(q)*24+9+5*Math.sin(q.s*0.019+sd*1.9);
-        const R3=320;
-        /* On the inside of a bend an offset beyond the radius crosses the bend's
-           centre and the band folds over itself. Each offset is therefore
-           capped at 70 % of the local radius – the cap is an absolute distance,
-           never below the verge, so neighbouring segments still share their
-           edges and the band stays one continuous surface. */
-        const rOn=(q,r)=>(side*(q.ks||0)>0)?Math.min(r,Math.max(R+0.5,0.7*q.R)):r;
-        const band=(r0,r1,z0a,z0b,z1a,z1b,fd)=>{const a0=rOn(a,r0),b0=rOn(b,r0),a1=rOn(a,r1),b1=rOn(b,r1);if(a1-a0<0.5&&b1-b0<0.5)return;
-          const Q=[toCam(ax+side*a.nx*a0,ay+side*a.ny*a0,z0a),toCam(bx+side*b.nx*b0,by+side*b.ny*b0,z0b),toCam(bx+side*b.nx*b1,by+side*b.ny*b1,z1b),toCam(ax+side*a.nx*a1,ay+side*a.ny*a1,z1a)];
-          if(Q[0].z<NEAR&&Q[1].z<NEAR&&Q[2].z<NEAR&&Q[3].z<NEAR)return;
-          if(Math.min(Q[0].z,Q[1].z,Q[2].z,Q[3].z)<2&&Math.max(Q[0].z,Q[1].z,Q[2].z,Q[3].z)>60)return;   // a quad reaching from beside the camera to far ahead projects as a sliver fan; its land is covered by the neighbours
-          // shading from the sidehill's slope only – smooth along the stage, so neighbouring segments never differ in colour and no stripes appear at grazing angles
-          const rel=side*kS(a)*(r1>R2?1.6:0.9);const base=mixCol(SC.meadow,SC.gNear,0.45);
-          const col=hazed(rel>0?mixCol(base,'#d8d0a8',Math.min(0.18,rel*0.12)):mixCol(base,'#000000',Math.min(0.28,-rel*0.18)),SC,Math.round((dSeg+fd)/40)*40);
-          fillCam(Q,fade<1?mixCol(horizonGround,col,fade):col,true);};
-        band(R,R2,a.z+side*a.bank*(a.w+VERGE),b.z+side*b.bank*(b.w+VERGE),hill(a,side),hill(b,side),40);}
+      // beyond the verge the land is the ray-marched height field (drawLandRays) – no per-segment bands any more
       if(!withVerge)continue;
       const P=[toCam(ax+side*a.nx*a.w,ay+side*a.ny*a.w,a.z+side*a.bank*a.w),
                toCam(bx+side*b.nx*b.w,by+side*b.ny*b.w,b.z+side*b.bank*b.w),
@@ -2523,7 +3019,7 @@ function drawRoadPass(sur,W,H){
       // ground beside the road: patches of meadow and field along the stage, each side its own rhythm
       let gcol=SC?SC.verge:'#161411';
       if(SC){const u=0.5+0.5*Math.sin(a.s*0.011+side*1.7)*Math.cos(a.s*0.0031+side*0.6);const fcol=u>0.62?SC.field:u<0.3?SC.meadow:SC.verge;gcol=mixCol(SC.verge,fcol,0.7);}
-      if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR)){let c=SC?hazed(gcol,SC,dSeg):gcol;if(SC&&fade<1)c=mixCol(horizonGround,c,fade);fillCam(P,c,!!SC);}
+      if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR)){let c=SC?hazed(gcol,SC,dSeg):gcol;if(SC&&fade<1)c=mixCol(horizonGround,c,fade);fillCam(P,c);}
     }
   };
   /* The sidehill reaches 320 m sideways, so the land of segments behind the
@@ -2534,22 +3030,27 @@ function drawRoadPass(sur,W,H){
     /* The far band (130–320 m) as one polygon per side over the whole window,
        drawn first: a single surface has no seams between segments, so it
        neither flickers in slices nor builds up segment by segment. */
-    const kS=q=>Math.sin(q.s*0.0052+0.8);
-    const hill=(q,sd)=>q.z*0.6+sd*kS(q)*9+3+3*Math.sin(q.s*0.031+sd*0.7);
-    const farZ=(q,sd)=>q.z*0.3+sd*kS(q)*24+9+5*Math.sin(q.s*0.019+sd*1.9);
-    const k0=w.rev?-w.back:-w.back-BACK, k1=w.rev?w.ahead-1+BACK:w.ahead-1;
-    for(const side of [1,-1]){
-      const rOn=(q,r)=>(side*(q.ks||0)>0)?Math.min(r,Math.max(R2,0.7*q.R)):r;
-      const outer=[],inner=[];
-      for(let k=k0;k<=k1;k+=2){const q=TRACK.pts[(S.idx+k+N*2)%N];
-        const ro=rOn(q,320),ri=rOn(q,R2);
-        outer.push(toCam(q.x+side*q.nx*ro,q.y+side*q.ny*ro,farZ(q,side)));inner.push(toCam(q.x+side*q.nx*ri,q.y+side*q.ny*ri,hill(q,side)));}
-      const poly=outer.concat(inner.reverse());
-      const pc=TRACK.pts[S.idx],rel=side*kS(pc)*1.6,base=mixCol(SC.meadow,SC.gNear,0.45);
-      const col=hazed(rel>0?mixCol(base,'#d8d0a8',Math.min(0.18,rel*0.12)):mixCol(base,'#000000',Math.min(0.28,-rel*0.18)),SC,260);
-      fillCam(poly,col);}
-    for(let j=BACK;j>0;j--){const k=w.rev?(w.ahead-1+j):(-w.back-j);const [a,b]=seg(k);
-      const dSeg=Math.hypot(a.x-cam3.ex,a.y-cam3.ey);terrainSeg(a,b,a.x-a.tx*O,a.y-a.ty*O,b.x+b.tx*O,b.y+b.ty*O,dSeg,1,true);}}
+    const kS=terrainKS,hill=terrainHill,farZ=terrainFar;
+    /* The far band (130–320 m) and the forest edge on it are drawn from the
+       whole track, independent of the road window: every stretch of track
+       within 900 m of the camera forms one run, and each run is one polygon
+       per side. Tied to the window, the band grew at its far end and shrank
+       behind as the window moved – the land built itself up while driving. */
+    PASS='far';
+    /* Every part of the track within 460 m that is not in the road window –
+       behind the car, and the other legs of hairpins and loops that pass
+       close by – is drawn here first, far to near: terrain, verge and road
+       surface, in steps of two points. Without it those areas appeared the
+       moment their segments entered the window. */
+    PASS='outside';const lo=w.rev?-w.ahead+1:-w.back, hi=w.rev?w.back:w.ahead-1, list=[];
+    const ST=DETAIL.lvl>=1?4:2, RAD=460;   // low detail: coarser, same reach – switching levels must not make anything appear or vanish
+    for(let i=0;i<N;i+=ST){let k=i-S.idx;k=((k%N)+N)%N;if(k>N/2)k-=N;if(k>=lo-ST&&k<=hi)continue;
+      const a=TRACK.pts[i];const d=Math.hypot(a.x-cam3.ex,a.y-cam3.ey);if(d<RAD)list.push([d,i]);}
+    list.sort((p,q)=>q[0]-p[0]);
+    for(const [d,i] of list){const a=TRACK.pts[i],b=TRACK.pts[(i+ST)%N];const fd=clamp((RAD-d)/80,0,1);
+      terrainSeg(a,b,a.x-a.tx*O,a.y-a.ty*O,b.x+b.tx*O,b.y+b.ty*O,d,fd,true);
+      const P=[toCam(a.x-a.tx*O+a.nx*a.w,a.y-a.ty*O+a.ny*a.w,a.z+a.bank*a.w),toCam(b.x+b.tx*O+b.nx*b.w,b.y+b.ty*O+b.ny*b.w,b.z+b.bank*b.w),toCam(b.x+b.tx*O-b.nx*b.w,b.y+b.ty*O-b.ny*b.w,b.z-b.bank*b.w),toCam(a.x-a.tx*O-a.nx*a.w,a.y-a.ty*O-a.ny*a.w,a.z-a.bank*a.w)];
+      if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR)){let rc=hazed(sur.fill3,SC,d);if(fd<1)rc=mixCol(horizonGround,rc,fd);fillCam(P,rc);}}}
   /* Lines, edges and posts of a segment are drawn only after the surface of
      the next-nearer segment is down: its obliquely projected end edge would
      otherwise cut a wedge out of the inner side of the line – visible as a
@@ -2591,7 +3092,7 @@ function drawRoadPass(sur,W,H){
       cx.globalAlpha=1;
     }
   };
-  const order=[];if(w.rev){for(let k=-w.back;k<=w.ahead-1;k++)order.push(k);}else{for(let k=w.ahead-1;k>=-w.back;k--)order.push(k);}   // far to near either way
+  PASS='window';const order=[];if(w.rev){for(let k=-w.back;k<=w.ahead-1;k++)order.push(k);}else{for(let k=w.ahead-1;k>=-w.back;k--)order.push(k);}   // far to near either way
   for(const k of order){
     const [a,b]=seg(k);
     // surfaces extended by O across segment boundaries, otherwise seams remain
@@ -2602,12 +3103,12 @@ function drawRoadPass(sur,W,H){
              toCam(bx+b.nx*b.w,by+b.ny*b.w,b.z+b.bank*b.w),
              toCam(bx-b.nx*b.w,by-b.ny*b.w,b.z-b.bank*b.w),
              toCam(ax-a.nx*a.w,ay-a.ny*a.w,a.z-a.bank*a.w)];
-    if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR))fillCam(P,hazed(sur.fill3,SC,dSeg));
+    if(!(P[0].z<NEAR&&P[1].z<NEAR&&P[2].z<NEAR&&P[3].z<NEAR)){let rc=hazed(sur.fill3,SC,dSeg);const fk=SC?winFade(k):1;if(fk<1)rc=mixCol(horizonGround,rc,fk);fillCam(P,rc);}   // the road too fades in at the far end of the window
     // snowbanks: ploughed snow along both edges, a low light wall that frames the road
-    if(SC&&SC.bank&&dSeg<260){for(const side of [1,-1]){const w0=0.35,w1=1.6,hb=0.45;
+    if(SC&&SC.bank&&dSeg<480){for(const side of [1,-1]){const w0=0.35,w1=1.6,hb=0.45;
       const B=[toCam(ax+side*a.nx*(a.w+w0),ay+side*a.ny*(a.w+w0),a.z+side*a.bank*(a.w+w0)),toCam(bx+side*b.nx*(b.w+w0),by+side*b.ny*(b.w+w0),b.z+side*b.bank*(b.w+w0)),
                toCam(bx+side*b.nx*(b.w+w1),by+side*b.ny*(b.w+w1),b.z+side*b.bank*(b.w+w1)+hb),toCam(ax+side*a.nx*(a.w+w1),ay+side*a.ny*(a.w+w1),a.z+side*a.bank*(a.w+w1)+hb)];
-      if(!(B[0].z<NEAR&&B[1].z<NEAR&&B[2].z<NEAR&&B[3].z<NEAR))fillCam(B,hazed(cfg.daylight?'#f2f5f8':'#aab2bc',SC,dSeg));}}
+      if(!(B[0].z<NEAR&&B[1].z<NEAR&&B[2].z<NEAR&&B[3].z<NEAR)){let bc=hazed(cfg.daylight?'#f2f5f8':'#aab2bc',SC,dSeg);const fk=winFade(k);if(fk<1)bc=mixCol(horizonGround,bc,fk);fillCam(B,bc);}}}
     // swept band around the line
     if(LINE&&roadState().band>0){const bw=roadState().band,ia=(S.idx+k+N*2)%N,ib=(S.idx+k+1+N*2)%N,oa=LINE[ia].o,ob=LINE[ib].o;
       const Q=[toCam(ax+a.nx*(oa+bw),ay+a.ny*(oa+bw),a.z+a.bank*(oa+bw)),toCam(bx+b.nx*(ob+bw),by+b.ny*(ob+bw),b.z+b.bank*(ob+bw)),
@@ -2723,7 +3224,7 @@ function drawRoadTexP(sur){
 function vegWindow(){const N=TRACK.N,w=trackWindow();return {N,w,rel:i=>{let r=((i-S.idx)%N+N)%N;if(r>N/2)r-=N;return r;}};}
 function drawBushP(){
   const bush=TRACK.pts.bush;if(!bush)return;
-  const sc=sceneFor(), lim=sc?320:180;const V=vegWindow();
+  const sc=sceneFor(), lim=sc?320:180;const V=vegWindow();VEG_LIM=lim;
   cx.fillStyle='#1c1f18';cx.strokeStyle='#2d3126';cx.lineWidth=1*DPR;
   const vis=[];for(let n=0;n<bush.length;n++){const b=bush[n];const r=V.rel(b.i);if(r>=-V.w.back&&r<V.w.ahead)continue;   // in the window: the road pass draws it
     const dx=b.x-cam3.ex,dy=b.y-cam3.ey,d2=dx*dx+dy*dy;if(d2>lim*lim)continue;if(dx*cam3.fx+dy*cam3.fy<0)continue;vis.push([d2,n]);}
@@ -2731,15 +3232,26 @@ function drawBushP(){
   for(const [d2,n] of vis)drawVeg(bush[n],n,sc,Math.sqrt(d2));
 }
 function drawVegAt(k,sc){   // vegetation of the segment k of the window
-  const bush=TRACK.pts.bush;if(!bush)return;const V=vegWindow();
-  for(let n=0;n<bush.length;n++){const b=bush[n];if(V.rel(b.i)!==k)continue;const dx=b.x-cam3.ex,dy=b.y-cam3.ey;if(dx*cam3.fx+dy*cam3.fy<0)continue;drawVeg(b,n,sc,Math.hypot(dx,dy));}
+  const bush=TRACK.pts.bush,va=TRACK.pts.vegAt;if(!bush||!va)return;const L=va[((S.idx+k)%TRACK.N+TRACK.N)%TRACK.N];if(!L)return;
+  for(const n of L){const b=bush[n];const dx=b.x-cam3.ex,dy=b.y-cam3.ey;if(dx*cam3.fx+dy*cam3.fy<0)continue;drawVeg(b,n,sc,Math.hypot(dx,dy));}
 }
+let VEG_LIM=320;
 function drawVeg(b,n,sc,d){
   const c0=toCam(b.x,b.y,b.z||0);if(c0.z<NEAR)return;
+  // fade in over the outer 25 % of the visible range – trees and bushes appear out of the haze, not with a pop
+  /* …and fade out when the camera comes within a few metres of the trunk:
+     a tree whose base is just in front of the camera projects across the
+     whole screen for a frame and is gone the next – a dark flash. */
+  const vf=clamp((VEG_LIM-d)/(VEG_LIM*0.25),0,1)*clamp((c0.z-2)/4,0,1),bf=clamp((180-d)/45,0,1);if(vf<=0)return;
+  cx.globalAlpha=vf;
+  try{drawVegInner(b,n,sc,d,c0,bf);}finally{cx.globalAlpha=1;}
+}
+function drawVegInner(b,n,sc,d,c0,bf){
   const seed=b.k!==undefined?b.k:n;
   const kind=sc?vegKind(sc,seed):'bush', u=((seed*40503>>>0)%1000)/1000;
   if(kind==='bush'&&d>180)return;
-  if(kind==='barn'){if(d<280)drawBarn(b,c0,sc,d,seed);return;}
+  if(kind==='bush'||kind==='rock')cx.globalAlpha*=bf;
+  if(kind==='barn'){drawBarn(b,c0,sc,d,seed);return;}
   if(kind==='conifer')drawConifer(b,c0,4+u*8,sc,d,seed);
   else if(kind==='pine')drawPine(b,c0,7+u*7,sc,d,seed);
   else if(kind==='birch')drawBirch(b,c0,5+u*6,sc,d,seed);
@@ -2760,46 +3272,40 @@ function vary(col,n){const u=((n*48271>>>0)%1000)/1000-0.5;return u>0?mixCol(col
 function drawTrunk(a,t,c0,sc,d,ht,frac,col,w){const x=a[0],y0=a[1],y1=a[1]+(t[1]-a[1])*frac,tw=Math.max(1,cam3.f*w/c0.z);
   cx.fillStyle=hazed(col,sc,d);cx.fillRect(x-tw/2,Math.min(y0,y1),tw,Math.abs(y1-y0));}
 function topOf(b,h){return proj(toCam(b.x,b.y,(b.z||0)+h));}
-function drawConifer(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),half=cam3.f*ht*0.34/c0.z;if(half<0.6)return;
-  drawTrunk(a,t,c0,sc,d,ht,0.24,sc.trunk||'#2b241c',0.22);
-  const lvl=[[0.18,0.55,1],[0.42,0.77,0.74],[0.66,1,0.48]];
-  const col=vary(sc.tree,seed),ls=litSide();
-  for(const [lo,hi,wf] of lvl){const x0=a[0]+(t[0]-a[0])*lo,y0=a[1]+(t[1]-a[1])*lo,x1=a[0]+(t[0]-a[0])*hi,y1=a[1]+(t[1]-a[1])*hi,hw=half*wf;
-    cx.fillStyle=hazed(col,sc,d);cx.beginPath();cx.moveTo(x0-hw,y0);cx.lineTo(x0+hw,y0);cx.lineTo(x1,y1);cx.closePath();cx.fill();
-    // the sun-facing half a shade lighter: gives the tree a body
-    cx.fillStyle=hazed(mixCol(col,'#c8b890',0.16),sc,d);cx.beginPath();cx.moveTo(x1,y0);cx.lineTo(x1+ls*hw,y0);cx.lineTo(x1,y1);cx.closePath();cx.fill();}
-  if(sc.snowCap){cx.fillStyle=hazed('#c8ced6',sc,d);   // snow lying on the upper side of each tier
-    for(const [lo,hi,wf] of lvl){const x1=a[0]+(t[0]-a[0])*hi,y1=a[1]+(t[1]-a[1])*hi,m=0.45,xm=a[0]+(t[0]-a[0])*(hi-(hi-lo)*m),ym=a[1]+(t[1]-a[1])*(hi-(hi-lo)*m),hw=half*wf*m;
-      cx.beginPath();cx.moveTo(xm-hw,ym);cx.lineTo(xm+hw,ym);cx.lineTo(x1,y1);cx.closePath();cx.fill();}}
+// small deterministic noise per tree
+function vr(seed,k){return ((Math.sin(seed*12.9898+k*78.233)*43758.5453)%1+1)%1;}
+/* Spruce: a ragged, narrow silhouette – tiers of drooping branches whose
+   width grows downward with irregular jags – not a stack of triangles. */
+function drawConifer(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),half=cam3.f*ht*0.27/c0.z;if(half<0.6)return;
+  const col=hazed(vary(sc.tree,seed),sc,d);cx.fillStyle=col;
+  const n=9,base=0.14;const L=[],R=[];
+  for(let k=0;k<=n;k++){const f=base+(1-base)*k/n;const y=a[1]+(t[1]-a[1])*f,x=a[0]+(t[0]-a[0])*f;const wf=(1-f)/(1-base);
+    const wo=half*wf*(0.85+0.3*vr(seed,k)),wi=wo*0.55;L.push([x-wo,y],[x-wi,y-(t[1]-a[1])*0.03]);R.push([x+wo*(0.9+0.2*vr(seed,k+20)),y],[x+wi,y-(t[1]-a[1])*0.03]);}
+  cx.beginPath();cx.moveTo(a[0]-half*0.12,a[1]);for(const p of L)cx.lineTo(p[0],p[1]);cx.lineTo(t[0],t[1]);for(let k=R.length-1;k>=0;k--)cx.lineTo(R[k][0],R[k][1]);cx.lineTo(a[0]+half*0.12,a[1]);cx.closePath();cx.fill();
+  if(sc.snowCap){cx.fillStyle=hazed('#dde2e7',sc,d);   // snow lying on the outer branch tips
+    for(let k=1;k<n;k+=1){if(vr(seed,k+50)<0.35)continue;const f=base+(1-base)*k/n;const y=a[1]+(t[1]-a[1])*f,x=a[0]+(t[0]-a[0])*f;const wo=half*(1-f)/(1-base)*(0.85+0.3*vr(seed,k));
+      const sd=vr(seed,k+60)<0.5?-1:1,ox=sd*wo*(0.25+0.4*vr(seed,k+70)),rw=wo*(0.18+0.22*vr(seed,k+80));   // irregular patches, one side or the other
+      cx.beginPath();cx.ellipse(x+ox,y-(t[1]-a[1])*0.01,rw,Math.max(1,(a[1]-t[1])*0.012),0,0,7);cx.fill();}}
 }
-/* Scots pine: a long bare trunk and a flat, layered crown at the top. */
-function drawPine(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.26/c0.z;if(R<0.6)return;
-  drawTrunk(a,t,c0,sc,d,ht,0.72,'#4a3a2a',0.30);
-  cx.fillStyle=hazed(vary(sc.tree,seed),sc,d);const ry=Math.max(1,Math.abs(t[1]-a[1])*0.12);
-  for(const [ox,oy,rx] of [[-0.45,0.22,0.6],[0.4,0.26,0.62],[0,0,0.8],[-0.1,-0.2,0.55]]){const yc=a[1]+(t[1]-a[1])*(0.86-oy*0.3)+oy*ry;cx.beginPath();cx.ellipse(a[0]+(t[0]-a[0])*0.86+R*ox,yc,R*rx,ry,0,0,7);cx.fill();}
+/* Irregular crown from a cluster of overlapping lobes, darker underneath,
+   a touch lighter on top – shared by pine, birch and broad-leaved trees. */
+function crownBlob(cxm,cym,R,ry,col,seed,d,sc,n){cx.fillStyle=hazed(col,sc,d);
+  for(let k=0;k<n;k++){const u=vr(seed,k),w=vr(seed,k+40);cx.beginPath();cx.ellipse(cxm+(u-0.5)*R*1.3,cym+(w-0.5)*ry*0.9,R*(0.35+0.25*vr(seed,k+80)),ry*(0.32+0.2*vr(seed,k+90)),0,0,7);cx.fill();}
+  cx.globalAlpha*=0.35;cx.fillStyle=hazed(mixCol(col,'#c9c6a8',0.18),sc,d);
+  for(let k=0;k<Math.ceil(n/2);k++){const u=vr(seed,k+7);cx.beginPath();cx.ellipse(cxm+(u-0.5)*R*0.9,cym-ry*0.3,R*0.3,ry*0.22,0,0,7);cx.fill();}
+  cx.globalAlpha/=0.35;}
+function drawPine(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.24/c0.z;if(R<0.6)return;
+  drawTrunk(a,t,c0,sc,d,ht,0.74,'#4a3c2e',0.26);
+  const ry=Math.max(1,Math.abs(t[1]-a[1])*0.16);crownBlob(a[0]+(t[0]-a[0])*0.86,a[1]+(t[1]-a[1])*0.86,R,ry,vary(sc.tree,seed),seed,d,sc,7);
 }
-/* Birch: a pale trunk with dark marks and a light, airy crown; bare in winter. */
-function drawBirch(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.22/c0.z,tw=Math.max(1,cam3.f*0.20/c0.z);if(R<0.5)return;
-  const y1=a[1]+(t[1]-a[1])*0.55;cx.fillStyle=hazed('#cfc8bc',sc,d);cx.fillRect(a[0]-tw/2,Math.min(a[1],y1),tw,Math.abs(y1-a[1]));
-  if(tw>2){cx.fillStyle=hazed('#3a3630',sc,d);for(let k=0;k<4;k++){const yy=a[1]+(y1-a[1])*(0.15+k*0.22);cx.fillRect(a[0]-tw/2,yy,tw*0.6,Math.max(1,tw*0.18));}}
-  const col=sc.snowCap?'#5a5e64':mixCol(vary(sc.crown,seed),'#9fb060',0.35);cx.fillStyle=hazed(col,sc,d);
-  if(sc.snowCap){cx.strokeStyle=hazed('#4a4e54',sc,d);cx.lineWidth=Math.max(1,tw*0.5);for(let k=0;k<5;k++){const f=0.5+k*0.1,yy=a[1]+(t[1]-a[1])*f,sx=(k%2?1:-1)*R*(0.3+0.1*k);cx.beginPath();cx.moveTo(a[0],yy);cx.lineTo(a[0]+sx,yy-R*0.5);cx.stroke();}}
-  else{const ry=Math.max(1,Math.abs(t[1]-a[1])*0.28);for(const [ox,oy,rx] of [[-0.3,0.2,0.65],[0.3,0.1,0.65],[0,-0.3,0.7]]){cx.beginPath();cx.ellipse(a[0]+R*ox,a[1]+(t[1]-a[1])*0.72+ry*oy,R*rx,ry*0.8,0,0,7);cx.fill();}}
+function drawBirch(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.2/c0.z,tw=Math.max(1,cam3.f*0.16/c0.z);if(R<0.5)return;
+  const y1=a[1]+(t[1]-a[1])*0.6;cx.fillStyle=hazed('#c7c1b6',sc,d);cx.fillRect(a[0]-tw/2,Math.min(a[1],y1),tw,Math.abs(y1-a[1]));
+  if(sc.snowCap){cx.strokeStyle=hazed('#4c4f53',sc,d);cx.lineWidth=Math.max(1,tw*0.35);for(let k=0;k<7;k++){const f=0.45+k*0.08,yy=a[1]+(t[1]-a[1])*f,sx=(k%2?1:-1)*R*(0.25+0.6*vr(seed,k));cx.beginPath();cx.moveTo(a[0],yy);cx.lineTo(a[0]+sx,yy-R*(0.4+0.3*vr(seed,k+3)));cx.stroke();}return;}
+  const ry=Math.max(1,Math.abs(t[1]-a[1])*0.3);crownBlob(a[0],a[1]+(t[1]-a[1])*0.74,R,ry,mixCol(vary(sc.crown,seed),'#8a9460',0.25),seed,d,sc,8);
 }
-function drawDecid(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),m=topOf(b,ht*0.62),R=cam3.f*ht*0.30/c0.z;if(R<0.6)return;
-  drawTrunk(a,t,c0,sc,d,ht,0.45,sc.trunk||'#2a241d',0.26);
-  const ccol=sc.snowCap?'#3a3e40':vary(sc.crown,seed);cx.fillStyle=hazed(ccol,sc,d);   // bare, frosted crowns in winter
-  const cxm=(m[0]+t[0])/2,cym=(m[1]+t[1])/2,ry=Math.max(1,Math.abs(t[1]-a[1])*0.30);
-  for(const [ox,oy,rx,rr] of [[-0.35,0.25,0.72,0.85],[0.35,0.15,0.72,0.9],[0,-0.35,0.7,0.8]]){cx.beginPath();cx.ellipse(cxm+R*ox,cym+ry*oy,R*rx,ry*rr,0,0,7);cx.fill();}
-  cx.fillStyle=hazed(mixCol(ccol,'#c8b890',0.14),sc,d);cx.beginPath();cx.ellipse(cxm+litSide()*R*0.3,cym-ry*0.2,R*0.4,ry*0.55,0,0,7);cx.fill();   // lit side
-}
-/* A barn or shed beside the road: a box with a gable roof, drawn as a billboard
-   quad – wall, roof, and a lit wall edge on the sun side. */
-function drawBarn(b,c0,sc,d,seed){const ht=3.6+((seed*7)%3)*0.5,wd=7+((seed*13)%4)*1.5,a=proj(c0),t=topOf(b,ht),r=topOf(b,ht+wd*0.28);const half=cam3.f*wd*0.5/c0.z;if(half<2)return;
-  cx.fillStyle=hazed(sc.barnWall,sc,d);cx.fillRect(a[0]-half,t[1],2*half,Math.max(1,a[1]-t[1]));
-  cx.fillStyle=hazed(mixCol(sc.barnWall,'#000000',0.35),sc,d);cx.fillRect(a[0]+(litSide()<0?0:-half),t[1],half,Math.max(1,a[1]-t[1]));   // shaded half
-  cx.fillStyle=hazed(sc.barnRoof,sc,d);cx.beginPath();cx.moveTo(a[0]-half*1.08,t[1]);cx.lineTo(a[0]+half*1.08,t[1]);cx.lineTo(a[0],r[1]);cx.closePath();cx.fill();
-  if(half>8){cx.fillStyle=hazed('#1a1612',sc,d);cx.fillRect(a[0]-half*0.18,a[1]-(a[1]-t[1])*0.75,half*0.36,(a[1]-t[1])*0.75);}   // the door
+function drawDecid(b,c0,ht,sc,d,seed){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.3/c0.z;if(R<0.6)return;
+  drawTrunk(a,t,c0,sc,d,ht,0.45,sc.trunk||'#2a241d',0.24);
+  const ry=Math.max(1,Math.abs(t[1]-a[1])*0.34);crownBlob(a[0],a[1]+(t[1]-a[1])*0.7,R,ry,sc.snowCap?'#3c4044':vary(sc.crown,seed),seed,d,sc,9);
 }
 function drawCypress(b,c0,ht,sc,d){const a=proj(c0),t=topOf(b,ht),R=cam3.f*ht*0.11/c0.z;if(R<0.5)return;
   cx.fillStyle=hazed(sc.tree,sc,d);cx.beginPath();cx.ellipse((a[0]+t[0])/2,(a[1]+t[1])/2,R,Math.max(1,Math.abs(t[1]-a[1])/2),0,0,7);cx.fill();
@@ -2928,6 +3434,16 @@ function drawRefs(W,H){
   }
 }
 
+/* Driver view over the 3D landscape: the WebGL canvas below draws the world,
+   this canvas only what belongs to the car and the instruments. */
+function drawPerspective3D(){
+  const W=cv.width,H=cv.height;
+  cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);
+  setupCam(W,H);
+  if(!glRender()){drawPerspective();return;}
+  drawSkidsP();drawDustP();drawConesP();drawBrakeP();drawGhostP();
+  drawBody(W,H);drawRefs(W,H);drawMouseHint(W,H);drawTopBand(W,H);drawOffTrackHint(W,H);
+}
 function drawPerspective(){
   const W=cv.width,H=cv.height;
   cx.setTransform(1,0,0,1,0,0);
@@ -2943,6 +3459,10 @@ function drawPerspective(){
     cx.beginPath();cx.moveTo(hz[0][0],hz[0][1]);cx.lineTo(hz[1][0],hz[1][1]);
     cx.lineTo(hz[1][0],H*3);cx.lineTo(hz[0][0],H*3);cx.closePath();cx.fill();
     if(sc)drawRidges(sc);
+    /* the land before anything that stands on it: drawn after the far
+       vegetation and the far ground texture it covered them, and they popped
+       up as soon as they entered the road window */
+    if(sc&&TRACK.hasZ){PASS='far';drawLandRays(sc);PASS='';}
   }
   if(cfg.far){
     drawFarVerticals();
@@ -3146,6 +3666,8 @@ rng('rTr','vTr',v=>{TOUCH.ratio=v/10;document.getElementById('vTr').textContent=
 seg('segTret',(v,b,r)=>{exclusive(b,r);TOUCH.ret=v==='1';});
 seg('segTmode',(v,b,r)=>{exclusive(b,r);TOUCH.mode=v;});
 seg('segHlock',(v,b,r)=>{exclusive(b,r);cfg.horizonLock=v==='1';});
+seg('segDetail',(v,b,r)=>{exclusive(b,r);DETAIL.mode=v;});
+seg('segRays',(v,b,r)=>{exclusive(b,r);cfg.sunRays=v==='1';});
 /* Graphics mode. 'simple' is the bare channel view the driver view started
    as – dark ground, horizon line, every element a flow channel, nothing else;
    'dusk' adds the scenery in evening light; 'day' is the full daylight look. */
@@ -4096,6 +4618,15 @@ function reset(){
 resize();TRACK=buildTrack(TRACKS[trackId]);buildTrackPaths();buildMap();buildLine();reset();setupMouse();setupMobile();setupTabs();setupTrackMenu();setupMenuTiers();
 
 let prevT=performance.now(),acc=0,fms=16,frameN=0,lastFrame=1/60,renderLead=0;
+/* Adaptive detail: when the frame time stays above 21 ms (below ~48 fps) the
+   far ground texture (which fades out anyway) is left out and the track
+   parts outside the road window are drawn more coarsely; nothing appears or
+   vanishes when the level changes. When it stays below 13 ms it comes back. Hysteresis and a 2 s hold, so
+   it does not toggle. Setup → Graphics detail can fix it to high or low. */
+const DETAIL={lvl:0,mode:'auto',hold:0};
+function detailUpdate(dt){if(DETAIL.mode!=='auto'){DETAIL.lvl=DETAIL.mode==='low'?1:0;return;}
+  DETAIL.hold=Math.max(0,DETAIL.hold-dt);if(DETAIL.hold>0)return;
+  if(DETAIL.lvl===0&&fms>21){DETAIL.lvl=1;DETAIL.hold=2;}else if(DETAIL.lvl===1&&fms<13){DETAIL.lvl=0;DETAIL.hold=2;}}
 const DT=1/360;
 function loop(now){
   requestAnimationFrame(loop);
@@ -4115,7 +4646,7 @@ function loop(now){
   offT=S.onTrack?0:offT+frame;
   pushMarks();
   draw(); drawInstruments(); drawMap(); updateHud(); audioUpdate();
-  fms=lerp(fms,frame*1000,0.08);
+  fms=lerp(fms,frame*1000,0.08);detailUpdate(frame);
   if((frameN++&15)===0)$('frameMs').textContent=fms.toFixed(1)+' ms';
   if(flashT>0){flashT-=frame; if(flashT<=0)$('flash').style.opacity=0;}
 }

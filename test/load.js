@@ -35,9 +35,11 @@ function loadEngine(opts){
   const doc=stub();
   const winBase=stub();
   const winProxy=new Proxy(winBase,{get(t,p){ if(p==='AudioContext')return opts.AudioContext; if(p==='webkitAudioContext')return undefined; if(p==='ResizeObserver')return stub(); return t[p]; }, has(){return false;}});
-  const docProxy=new Proxy(doc,{get(t,p){ if(p==='getElementById')return id=>canvases[id]||stub(); return t[p]; }});
+  const docProxy=new Proxy(doc,{get(t,p){ if(p==='getElementById')return id=>canvases[id]||stub();
+    if(p==='createElement'&&opts.render)return tag=>tag==='canvas'?require('@napi-rs/canvas').createCanvas(1,1):stub();   // offscreen canvases for real
+    return t[p]; }});
   const ctx={
-    console, Math, Object, Array, Float64Array, Float32Array, Uint8Array, Number, String, Boolean, JSON, Date, Symbol, Proxy, Promise, Error, Map, Set,
+    console, Math, Object, Array, Float64Array, Float32Array, Uint8Array, Uint32Array, Uint8ClampedArray, Number, String, Boolean, JSON, Date, Symbol, Proxy, Promise, Error, Map, Set,
     document:docProxy, window:winProxy, navigator:stub(), screen:stub(), performance:{now:()=>0},
     requestAnimationFrame(){}, addEventListener(){}, removeEventListener(){}, setTimeout(){}, clearTimeout(){},
     Path2D:opts.Path2D||stub(), DOMPoint:class{constructor(x,y){this.x=x;this.y=y;}}, KeyboardEvent:stub(), ResizeObserver:stub(), devicePixelRatio:1,
