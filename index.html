@@ -62,9 +62,12 @@ body{
 }
 .data{font-family:ui-monospace,SFMono-Regular,"Roboto Mono",Menlo,monospace}
 
-#stage{position:relative;flex:1;min-width:0}
-canvas#world{display:block;width:100%;height:100%;position:relative;z-index:1}
-canvas#world3d{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0;display:none}
+#stage{position:relative;flex:1;min-width:0;z-index:0}
+canvas#world{display:block;width:100%;height:100%}
+/* the 3D canvas lies BEHIND everything in the stage: #stage is its own stacking context, the 3D canvas has a negative
+   z-index, the 2D canvas stays in the normal flow, and every panel (setup, keys, flash, menus) keeps its place above.
+   Giving the 2D canvas a z-index instead had lifted it over the setup panel, which could no longer be used. */
+canvas#world3d{position:absolute;left:0;top:0;width:100%;height:100%;z-index:-1;display:none}
 
 /* ---- Side panel ---- */
 #hud{
@@ -183,7 +186,7 @@ html,body{height:100%;height:100dvh}
   cursor:pointer;z-index:40;user-select:none}
 .tab:active{background:#2a2620}
 #setupTab{left:0;border-left:0;border-radius:0 5px 5px 0}
-#setup.on ~ #setupTab{left:290px}
+#setup.on ~ #setupTab,body.setupOpen #setupTab{left:290px}
 #hudTab{right:0;border-right:0;border-radius:5px 0 0 5px;display:none}
 body.mobile #hud{position:fixed;top:0;right:0;bottom:0;width:min(302px,86vw);z-index:35;
   transform:translateX(101%);transition:transform .18s ease;border-left:1px solid #26221d}
@@ -192,7 +195,7 @@ body.mobile #hudTab{display:flex}
 body.mobile #hud.on ~ #hudTab{right:min(302px,86vw)}
 body.mobile #keys{display:none}
 body.mobile #setup{width:min(290px,86vw);padding-bottom:60px}
-body.mobile #setup.on ~ #setupTab{left:min(290px,86vw)}
+body.mobile #setup.on ~ #setupTab,body.mobile.setupOpen #setupTab{left:min(290px,86vw)}
 /* Touch bar */
 #touchbar{position:absolute;right:12px;top:12px;display:none;gap:8px;z-index:30}
 #hbBtn{position:absolute;left:14px;bottom:14px;display:none;z-index:30}
@@ -1179,7 +1182,7 @@ addEventListener('keydown',e=>{
   if(k==='g'){ghost?ghost=null:spawnGhost();}
   if(k==='l')exportLog();
   if(k==='p')report();
-  if(k==='k'){REC.incident=null;REC.pending=null;} if(k==='o')document.getElementById('setup').classList.toggle('on');
+  if(k==='k'){REC.incident=null;REC.pending=null;} if(k==='o')toggleSetup();
   if(k==='c'){
     if(cfg.view!=='top'){cfg.view='top';cam.mode=0;}
     else if(cam.mode===0)cam.mode=1;
@@ -2197,12 +2200,12 @@ function makeTex(kind){GL.texs=GL.texs||{};if(GL.texs[kind])return GL.texs[kind]
   const P=(x,y,f,sd)=>{const fx=x*f/n,fy=y*f/n,i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j,su=u*u*(3-2*u),sv=v*v*(3-2*v),h=(a,b)=>vhash(((a%f)+f)%f,((b%f)+f)%f,sd);
     const a=h(i,j),b=h(i+1,j),cc=h(i,j+1),d=h(i+1,j+1);return (a+(b-a)*su)+((cc+(d-cc)*su)-(a+(b-a)*su))*sv;};
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){let v;const gr=Math.random();
-    if(kind==='ground')v=0.80+0.16*P(x,y,4,11)+0.08*P(x,y,16,12)+0.06*(gr-0.5);
-    else if(kind==='gravel')v=0.84+0.08*P(x,y,8,21)+(gr>0.93?0.22:gr<0.06?-0.2:0.05*(gr-0.5));
-    else if(kind==='tarmac')v=0.88+0.06*P(x,y,8,31)+0.08*(gr-0.5)+(gr>0.985?0.18:0);
+    if(kind==='ground')v=0.74+0.22*P(x,y,4,11)+0.12*P(x,y,16,12)+0.10*(gr-0.5);
+    else if(kind==='gravel')v=0.80+0.12*P(x,y,8,21)+(gr>0.90?0.30:gr<0.08?-0.30:0.08*(gr-0.5));
+    else if(kind==='tarmac')v=0.86+0.08*P(x,y,8,31)+0.14*(gr-0.5)+(gr>0.98?0.25:0);
     else v=0.90+0.07*P(x,y,4,41)+0.03*P(x,y,32,42)+0.02*(gr-0.5);
     const b=clamp(Math.round(v*255),0,255);im.data[(y*n+x)*4]=im.data[(y*n+x)*4+1]=im.data[(y*n+x)*4+2]=b;im.data[(y*n+x)*4+3]=255;}
-  g.putImageData(im,0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;t.encoding=THREE.sRGBEncoding;return GL.texs[kind]=t;}
+  g.putImageData(im,0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=16;t.encoding=THREE.sRGBEncoding;return GL.texs[kind]=t;}
 function noiseTex(){return makeTex('ground');}
 function glClear(){const sc=GL.scene;for(const o of (GL.objs||[])){sc.remove(o);o.traverse&&o.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});}GL.objs=[];}
 function glAdd(o){GL.scene.add(o);GL.objs.push(o);return o;}
@@ -2268,7 +2271,7 @@ function glBuild(){
   // instanced models: guide posts and vegetation
   const inst=(geo,mat,list)=>{if(!list.length)return;const im=new THREE.InstancedMesh(geo,mat,list.length);const m4=new THREE.Matrix4(),q4=new THREE.Quaternion(),v=new THREE.Vector3(),s3=new THREE.Vector3();
     list.forEach((it,k)=>{v.set(it.x,it.y,it.z);q4.setFromAxisAngle(new THREE.Vector3(0,0,1),it.rot||0);s3.set(it.sx,it.sy,it.sz);m4.compose(v,q4,s3);im.setMatrixAt(k,m4);im.setColorAt(k,it.lc?new THREE.Color(it.lc[0],it.lc[1],it.lc[2]):col3(it.c));});
-    im.instanceMatrix.needsUpdate=true;if(im.instanceColor)im.instanceColor.needsUpdate=true;glAdd(im);};
+    im.instanceMatrix.needsUpdate=true;if(im.instanceColor)im.instanceColor.needsUpdate=true;im.frustumCulled=false;return glAdd(im);};
   const posts=[];for(const p of T.pts){if(!p.post)continue;for(const side of (p.post===3?[1,-1]:[p.post===1?1:-1])){const o=side*(p.w+0.85);posts.push({x:p.x+p.nx*o,y:p.y+p.ny*o,z:p.z+p.bank*o+0.52,sx:0.12,sy:0.12,sz:1.05,c:'#e4dccb'});}}
   const box=new THREE.BoxGeometry(1,1,1);inst(box,new THREE.MeshLambertMaterial(),posts);
   const facet=g=>{const n=g.index?g.toNonIndexed():g;n.computeVertexNormals();return n;};   // faceted shading: Lambert has no flatShading in r128
@@ -2320,9 +2323,18 @@ function glBuild(){
       const z=landH(x,y),u=vhash(gx|0,gy|0,94),seed=(gx*31+gy*17)|0;cnt++;
       if(cfg.surface!=='tarmac'||u<0.35)tree(L.spruce,x,y,z,9+u*10,0.85+0.2*u,u*6.28,seed);
       else if(u<0.7)tree(L.broad,x,y,z,7+u*6,1.05,u*6.28,seed);else tree(L.pine,x,y,z,9+u*6,1.0,u*6.28,seed);}}
-  const vmat=()=>new THREE.MeshLambertMaterial({vertexColors:true});
-  inst(spruceG(!!sc.snowCap),vmat(),L.spruce);inst(broadG(sc.snowCap?'#5e6468':sc.crown,sc.trunk),vmat(),L.broad);inst(pineG,vmat(),L.pine);
-  inst(birchG(!!sc.snowCap),vmat(),L.birch);inst(cypressG,vmat(),L.cypress);
+  const vmat=new THREE.MeshLambertMaterial({vertexColors:true});
+  /* Level of detail, the usual way: trees are grouped into 250 m tiles; near
+     tiles use the detailed models, far tiles a simple one (a single cone or
+     lobe), tiles out of range or behind the camera are not drawn at all. The
+     light-shaft pass draws the same reduced set. */
+  const lo={spruce:merge([trunkG(0.22,0.035,0.02,sc.trunk),part(new THREE.ConeGeometry(0.3,0.86,6,1),mul(tr(0,0,0.55),rotX),sc.tree,t=>0.62+0.45*t)]),
+    broad:merge([trunkG(0.5,0.05,0.035,sc.trunk),...lobes([[0,0,0.68,0.3]],sc.snowCap?'#5e6468':sc.crown)]),pine:merge([trunkG(0.82,0.035,0.025,'#5a4634'),...lobes([[0,0,0.86,0.22]],mixCol(sc.tree,'#7f8a62',0.2))]),
+    birch:merge([trunkG(0.62,0.03,0.02,'#d2ccc0'),...lobes([[0,0,0.74,0.2]],sc.snowCap?mixCol('#6f7579','#d6dbe0',0.35):mixCol(sc.crown,'#9aa270',0.4))]),cypress:cypressG};
+  const hi={spruce:spruceG(!!sc.snowCap),broad:broadG(sc.snowCap?'#5e6468':sc.crown,sc.trunk),pine:pineG,birch:birchG(!!sc.snowCap),cypress:cypressG};
+  const T2=250,chunks=new Map();
+  for(const kind of Object.keys(hi))for(const it of L[kind]){const key=Math.floor(it.x/T2)+','+Math.floor(it.y/T2);let c=chunks.get(key);if(!c){c={x:(Math.floor(it.x/T2)+0.5)*T2,y:(Math.floor(it.y/T2)+0.5)*T2,lists:{}};chunks.set(key,c);}(c.lists[kind]||(c.lists[kind]=[])).push(it);}
+  GL.chunks=[];for(const c of chunks.values()){const e={x:c.x,y:c.y,hi:[],lo:[]};for(const kind of Object.keys(c.lists)){e.hi.push(inst(hi[kind],vmat,c.lists[kind]));e.lo.push(inst(lo[kind],vmat,c.lists[kind]));}GL.chunks.push(e);}
   inst(rockG,new THREE.MeshLambertMaterial(),L.rock);inst(blob,new THREE.MeshLambertMaterial(),L.bush);
   // sky dome and mountains: they move with the camera, so they stay at infinity
   {const g=new THREE.SphereGeometry(20000,32,16);g.rotateX(Math.PI/2);const c=new Float32Array(g.attributes.position.count*3);const top=rgbOf(sc.skyTop),hor=rgbOf(sc.skyHor),hz=rgbOf(sc.haze);
@@ -2392,6 +2404,8 @@ function glRender(){
   const v=cam.matrixWorldInverse;v.set(C.rx,C.ry,C.rz,-(C.rx*C.ex+C.ry*C.ey+C.rz*C.ez),C.ux,C.uy,C.uz,-(C.ux*C.ex+C.uy*C.ey+C.uz*C.ez),-C.fx,-C.fy,-C.fz,(C.fx*C.ex+C.fy*C.ey+C.fz*C.ez),0,0,0,1);
   cam.matrixWorld.copy(v).invert();
   GL.sky.position.set(C.ex,C.ey,C.ez);GL.mtn.position.set(C.ex,C.ey,0);GL.decor.position.set(C.ex,C.ey,C.ez);GL.sky.updateMatrixWorld();GL.mtn.updateMatrixWorld();GL.decor.updateMatrixWorld(true);
+  for(const e of (GL.chunks||[])){const dx=e.x-C.ex,dy=e.y-C.ey,d=Math.hypot(dx,dy),ahead=dx*C.fx+dy*C.fy;
+    const vis=d<1250&&(ahead>-200||d<260),near=d<330;for(const m of e.hi)m.visible=vis&&near;for(const m of e.lo)m.visible=vis&&!near;}
   GL.renderer.render(GL.scene,cam);
   if(cfg.sunRays!==false)glRays();
   return true;
@@ -2960,12 +2974,12 @@ function horizonLine(W){
 /* Ground marks are collected first and drawn far to near in the road pass,
    binned by nearest track segment. That way a crest hides what lies behind
    it. Without a profile the order is the same as before. */
-function collectGroundMarks(W,H,bins,far){
+function collectGroundMarks(W,H,bins,far,maxB){
   const snowy=cfg.scenery&&cfg.surface==='snow';   // on snow the ground texture is packed snow and ice, not dirt
   const bands=[[1.6,2.0,26,0.050,snowy?'#46505b':'#5a5145'],[5.5,26,86,0.17,snowy?'rgba(62,72,84,0.72)':'rgba(75,67,56,0.72)'],
                [20,86,320,0.60,snowy?'rgba(72,82,94,0.42)':'rgba(66,59,49,0.42)']];
   const N=TRACK.N,w=trackWindow();
-  for(let bi=0;bi<(DETAIL.lvl>=1?2:3);bi++){   // detail level 1+: the far texture band (86–320 m) is left out
+  for(let bi=0;bi<(maxB||(DETAIL.lvl>=1?2:3));bi++){   // detail level 1+: the far texture band (86–320 m) is left out
     const g=bands[bi][0],r0=bands[bi][1],r1=bands[bi][2],sz=bands[bi][3],col=bands[bi][4];
     const r02=r0*r0,r12=r1*r1;
     const i0=Math.floor((cam3.ex-r1)/g),i1=Math.ceil((cam3.ex+r1)/g);
@@ -3472,6 +3486,10 @@ function drawPerspective3D(){
   cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,W,H);
   setupCam(W,H);
   if(!glRender()){drawPerspective();return;}
+  /* the near-field texture of the 2D view on top: grit and tufts on the ground
+     up to 86 m, streaked with the motion between two frames. A textured mesh
+     alone gives far less optical flow near the car – the speed felt slower. */
+  if(cfg.near){const bins=[],far=[];collectGroundMarks(W,H,bins,far,2);drawMarkList(far);for(const b of bins)drawMarkList(b);cx.globalAlpha=1;}
   drawSkidsP();drawDustP();drawConesP();drawBrakeP();drawGhostP();
   drawBody(W,H);drawRefs(W,H);drawMouseHint(W,H);drawTopBand(W,H);drawOffTrackHint(W,H);
 }
@@ -4363,8 +4381,12 @@ function setupMenuTiers(){
   document.getElementById('ffbInv')&&document.getElementById('ffbInv').addEventListener('click',e=>{FFB.inv=!FFB.inv;e.target.classList.toggle('on',FFB.inv);});
   rng('rFfb','vFfb',v=>FFB.gain=v);
 }
+/* The setup tab lives outside the stage, so a sibling selector cannot move it
+   with the panel; a class on the body does – the tab then sits at the panel's
+   edge instead of lying over its controls. */
+function toggleSetup(on){const e=document.getElementById('setup');const v=on===undefined?!e.classList.contains('on'):on;e.classList.toggle('on',v);document.body.classList.toggle('setupOpen',v);}
 function setupTabs(){
-  document.getElementById('setupTab').addEventListener('click',()=>document.getElementById('setup').classList.toggle('on'));
+  document.getElementById('setupTab').addEventListener('click',()=>toggleSetup());
   document.getElementById('hudTab').addEventListener('click',()=>document.getElementById('hud').classList.toggle('on'));
 }
 

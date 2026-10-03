@@ -2,6 +2,12 @@
 
 The simulation was developed iteratively; each step below was measured against the test harness before it was kept.
 
+## 1.6.0
+
+- Fixed: the setup panel could not be used in the 3D view – the 2D canvas lay above the panel. The stage is now its own stacking context with the 3D canvas behind it. The setup tab also moves to the panel's edge when it opens instead of lying over the controls. Checked with real clicks in Chromium (`test/browser/ui.py`).
+- Speed impression in the 3D view: the near-field ground texture of the 2D view (grit and tufts to 86 m, streaked with the motion between frames) is drawn over the 3D landscape again, and the surface textures have more contrast and 16× anisotropic filtering. Image change per half metre travelled on the stage, three places: 9.9 → 12.6 (+27 %) against 1.5.1 (`test/browser/flow.py`).
+- Trees use level of detail by 250 m tiles – detailed near, a single cone or lobe far, nothing out of range or behind – with their own culling, so far fewer triangles per frame.
+
 ## 1.5.1
 
 - three.js r128 is included in `index.html` instead of loaded from cdnjs: the page is one self-contained file again, makes no request to a third party, and the 3D landscape works offline and from a downloaded copy. The library is unmodified (same SHA-512 as the cdnjs and npm builds), with its MIT licence in a comment above it and in `NOTICE`. `index.html` grows from about 250 to about 880 kB.
