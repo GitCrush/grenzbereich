@@ -1,6 +1,6 @@
 # Grenzbereich — Rally Vehicle Dynamics
 
-A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no build step, no assets – the 3D landscape loads one library, three.js r128, from cdnjs; without it, or without WebGL, the built-in 2D renderer draws the driver view: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
+A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no build step, nothing loaded from elsewhere – the one library it uses, three.js r128 (MIT) for the 3D landscape, is included in the file; without WebGL the built-in 2D renderer draws the driver view: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
 
 Every mechanism in the physics is written down in the code and measured against standard manoeuvres. A phantom car drives the same physics on the ideal line, a data logger names the cause of every spin, and a headless test harness runs 100+ scenarios against plausibility rules.
 

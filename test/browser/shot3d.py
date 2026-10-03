@@ -7,7 +7,6 @@ async def main(track,surface,secs,out,w=1280,h=720):
         b=await p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
         ctx=await b.new_context(viewport={'width':w,'height':h},ignore_https_errors=True)
         pg=await ctx.new_page()
-        await pg.route('**/three.min.js',lambda r:r.fulfill(path='os.environ.get('THREE_JS','node_modules/three/build/three.min.js')',content_type='application/javascript'))
         errs=[];pg.on('pageerror',lambda e:errs.append(str(e)));pg.on('console',lambda m:errs.append(m.text) if m.type=='error' else None)
         await pg.goto(URL);await pg.wait_for_timeout(1500)
         ok=await pg.evaluate("()=>typeof THREE!=='undefined'")

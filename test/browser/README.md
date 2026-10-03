@@ -9,7 +9,7 @@ are checked here with a headless Chromium through Playwright.
 
 `ghost` lets the phantom drive; without it the script holds the throttle and steers in pulses.
 
-The driver view draws the landscape with three.js (r128) from cdnjs. Where the test machine cannot reach the CDN,
-`shot3d.py` serves a local copy instead (`npm install three@0.128.0`, or set `THREE_JS` to the file):
+The driver view draws the landscape with three.js (r128), which is included in `index.html`, so no network is needed.
+`shot3d.py` renders one frame of the 3D view:
 
     python shot3d.py rundkurs gravel 6 out/circuit.png

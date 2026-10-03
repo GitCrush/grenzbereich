@@ -2,6 +2,11 @@
 
 The simulation was developed iteratively; each step below was measured against the test harness before it was kept.
 
+## 1.5.1
+
+- three.js r128 is included in `index.html` instead of loaded from cdnjs: the page is one self-contained file again, makes no request to a third party, and the 3D landscape works offline and from a downloaded copy. The library is unmodified (same SHA-512 as the cdnjs and npm builds), with its MIT licence in a comment above it and in `NOTICE`. `index.html` grows from about 250 to about 880 kB.
+- `test/browser/shot3d.py` no longer fails with a syntax error (the route that served a local three.js copy is gone with the CDN).
+
 ## 1.5.0
 
 - The landscape of the driver view is a 3D scene in WebGL (three.js r128, loaded from cdnjs with a subresource-integrity hash): a terrain mesh from a gentle height field (14 m grid, 1.6 km beyond the track, lowered under the road); road, shoulders, edge lines, driven band, ruts and snowbanks as ribbon meshes on it; instanced low-poly trees, rocks, bushes and guide posts (up to 14 000 trees, one draw call per model); sky dome, distant mountains, distance fog and a depth buffer, so it is stable from every angle. Without WebGL or without the library the 2D renderer draws the view as before.

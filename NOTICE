@@ -2,3 +2,7 @@ Grenzbereich — Rally Vehicle Dynamics
 Copyright 2026 the grenzbereich authors
 
 Licensed under the Apache License, Version 2.0.
+
+index.html includes three.js r128, unmodified, under the MIT License:
+Copyright © 2010-2021 three.js authors. The full licence text is in the
+comment at the top of the included script.
