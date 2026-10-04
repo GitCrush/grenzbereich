@@ -2,6 +2,18 @@
 
 The simulation was developed iteratively; each step below was measured against the test harness before it was kept.
 
+## 1.7.0
+
+- Landscapes and weathers (track menu). Seven landscapes – Nordic forest, Alpine, Mediterranean, Desert, Savanna, Highlands, Winter – each with its own palette, relief, roadside and woodland vegetation (new models: larch, umbrella pine, olive, acacia, baobab), water in the hollows, horizon and sun; the Mediterranean is a coast with olive groves, dry-stone walls and white villages, the Desert has dunes, sandstone buttes and mesas, the Savanna acacias, termite mounds and a volcano on the horizon. Choosing one also selects its usual surface and weather. Six weathers on top: clear, overcast, fog, rain, snowfall, dust.
+- Rain changes the surfaces: tarmac loses about a quarter of its grip (µ 1.52 → 1.12), gravel hardly anything (its grip comes from stones interlocking and ploughing), sand gets firmer.
+- New surface **sand** (desert and savanna): loose, high rolling resistance and a speed-dependent sinkage drag; wind-ripple texture.
+- Road hazards (track menu: off / light / heavy), placed per track by what landscape and weather make likely, each with an irregular outline and soft rim shared by physics and drawing, acting per wheel: puddles with partial and full hydroplaning and water drag (a puddle under one side pulls the car towards it), snow patches and ice, sand drifts and gravel spills. Braking 100–0 km/h with ABS on tarmac across 30 m of a patch: clean 33.6 m, sand 5 mm 35.5 m, gravel 40.2 m, snow 52.3 m, ice 60.4 m (`test/hazards.js`).
+- Pace notes (`N`, on by default): the next three notes within 350 m, corners graded on the rally scale from the tightest radius (6 > 200 m … 1 15–25 m, hairpin), with tightens, opens, long, over crest and into; crests, jumps, dips and road hazards; the distance counting down. Worked out from the road, so random stages have notes too.
+- Random stages (track menu → Random stage, ↻ new): a seeded generator builds a closed stage of 1.3–3.6 km with hairpins, sweepers, hills and dips, banking and off-camber; two dials, curves and elevation, from gentle to tight and steep. Seed and dials are in the address (`#seed=…&c=…&e=…`), so a stage can be shared and driven again. Matrix scenarios cover random stages (117 scenarios).
+- Physics check gravel vs tarmac, AWD base setup on the R 40 m skidpad at 60 km/h: body slip 1.3° on gravel against 0.7° on tarmac, tyre slip angles front/rear 5.0°/3.1° against 1.8°/1.3° (`test/gravelcheck.js`); no change to the model.
+- Fixed: driven-line and rut ribbons floated above or sank below a banked road where the line runs off-centre.
+- README: screenshots of landscapes, random stages, road hazards and pace notes.
+
 ## 1.6.0
 
 - Fixed: the setup panel could not be used in the 3D view – the 2D canvas lay above the panel. The stage is now its own stacking context with the 3D canvas behind it. The setup tab also moves to the panel's edge when it opens instead of lying over the controls. Checked with real clicks in Chromium (`test/browser/ui.py`).

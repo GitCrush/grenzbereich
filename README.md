@@ -1,6 +1,6 @@
 # Grenzbereich — Rally Vehicle Dynamics
 
-A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no build step, nothing loaded from elsewhere – the one library it uses, three.js r128 (MIT) for the 3D landscape, is included in the file; without WebGL the built-in 2D renderer draws the driver view: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
+A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no build step, nothing loaded from elsewhere – the one library it uses, three.js r128 (MIT) for the 3D landscape, is included in the file; without WebGL the built-in 2D renderer draws the driver view: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel, sand and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
 
 Every mechanism in the physics is written down in the code and measured against standard manoeuvres. A phantom car drives the same physics on the ideal line, a data logger names the cause of every spin, and a headless test harness runs 100+ scenarios against plausibility rules.
 
@@ -16,12 +16,21 @@ The simulator is the single file [`index.html`](index.html) in this repository, 
 
 ![Top view with the full interface: tyre forces, dust, skid marks, phantom and elevation profile](docs/screenshots/top-view-gravel.png)
 
+![Landscapes and weathers in the 3D view](docs/screenshots/landscapes.png)
+
+| Mediterranean, desert and savanna | Random stage: the track menu with its curves and elevation dials |
+|---|---|
+| ![](docs/screenshots/landscapes-south.png) | ![](docs/screenshots/random-stage.png) |
+| **Road hazards announced by the pace notes: gravel in the rain, sand, snow** | **Pace notes on the rally scale** |
+| ![](docs/screenshots/road-hazards.png) | ![](docs/screenshots/pace-notes.png) |
+
 ## What it is for
 
 The interesting part of driving a rally car happens in the last ten percent of grip: where the front axle starts to push, where the rear steps out, where lifting the throttle rotates the car and where a locked wheel stops steering. Grenzbereich is built around making that region legible:
 
 - **Tyre usage per axle** in the HUD, load-weighted, colour-coded from the torque peak to the grip limit.
 - **A phantom** that drives the same car on the ideal line with a consistent driver model, so you can see where it brakes and how much it slides.
+- **Pace notes** (`N`): the next corners graded on the rally scale (6 fast … 1, hairpin) with tightens, opens, long, over crest and into, crests, dips and road hazards, the distance counting down – worked out from the road, also for random stages.
 - **A tutor** (`U`): one recommendation for the steering wheel, on the band at the top of the screen, that keeps the car stable *and* on the road – on the line you are driving, not the ideal line. It continues your offset and the way you are moving across the road, aims a look-ahead down the road, and gives the wheel angle for that: in grip from the car's own steady-state behaviour (learned while you drive), in a slide from the front axle's direction of travel against the yaw the car cannot sustain. Quiet while the car is settled; shows bends ahead, the road edge, and slides (counter-steer, unwind). It never touches the input.
 - **A data logger** (14-second ring buffer) with an incident detector that freezes the window around a breakaway and names the probable cause — lift-off, locked wheels, power-on, entry speed.
 - **Exercises**: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
@@ -39,7 +48,7 @@ The model is a textbook multi-body vehicle model rather than a soft-body or a ga
 
 **Drivetrain** — engine as its own inertial state with a torque map and restrictor plateau, turbo spool as a first-order state (with anti-lag), stick-slip clutch with a driver model for launch and stall protection, five-speed sequential with ignition-cut upshifts and throttle-blip downshifts, plated axle differentials as Coulomb constraints with separate drive and coast locking values in the conventional sense (the torque difference the diff can hold as a share of the input torque), and a **rigid centre coupling** (Rally2 has no centre differential) implemented the same way. The handbrake disconnects the rear axle from the drive, as the real car's hydraulic clutch does.
 
-**Road** — a road-fixed reference frame carries grade, cross slope and vertical curvature: crests unload the car, dips load it, banking presses it into the road. The circuit has an elevation profile – 20 m of height, a blind crest, a compression, a banked corner and an off-camber one – and so does the stage (21 m, grades to 8 %); and the land beside the road is a sidehill, so the profile is legible against the surroundings. The **road state** model makes the surface non-uniform across its width: a swept band around the driven line, loose material outside it, a berm at the edge, and ruts whose walls act on the wheels through the local cross slope.
+**Road** — a road-fixed reference frame carries grade, cross slope and vertical curvature: crests unload the car, dips load it, banking presses it into the road. Four surfaces – tarmac, gravel, sand, snow – with their own grip, looseness and rolling resistance, and road hazards on top of them: puddles with partial and full hydroplaning and water drag, snow patches and ice, sand drifts and gravel spills, each acting on the wheel that is in it. Seven landscapes (Nordic forest, Alpine, Mediterranean coast with villages and olive groves, Desert with dunes and buttes, Savanna with acacias, termite mounds and a volcano, Highlands, Winter) and six weathers (clear, overcast, fog, rain – wet tarmac loses a quarter of its grip, gravel hardly any –, snowfall, dust) can be combined freely in the track menu. Random stages come from a seeded generator (track menu, or `#seed=…&c=…&e=…` in the address) with two dials, curves and elevation: from flowing and flat to tight hairpins, chicanes, 15 % grades and crests that unload the car – checked to be driveable. The circuit has an elevation profile – 20 m of height, a blind crest, a compression, a banked corner and an off-camber one – and so does the stage (21 m, grades to 8 %); and the land beside the road is a sidehill, so the profile is legible against the surroundings. The **road state** model makes the surface non-uniform across its width: a swept band around the driven line, loose material outside it, a berm at the edge, and ruts whose walls act on the wheels through the local cross slope.
 
 **Driver models for the input device** — a keyboard key is on or off, a foot is not. The keyboard brake holds the pedal at the lock point (threshold braking, ~5 Hz), the keyboard throttle backs off when the driven wheels spin beyond the tyre's peak slip and comes back as they hook up (launches excepted), the clutch is operated by a launch-rpm model, and the keyboard steering commands the front slip angle rather than the wheel angle, so counter-steer follows by itself. Each of these can be switched to raw in the setup. Analogue inputs (pad, wheel) stay raw. Mouse steering follows the pointer position: the horizontal offset from the centre of the view is the steering-wheel angle, linear, no self-centring, the travel fitted to the window so that full lock is reached at its edges; once the mouse has taken the wheel it keeps it wherever the hand goes, until a steering key or a moving gamepad stick takes it back. Throttle stays on the keyboard, the mouse buttons are clutch and brake.
 
@@ -57,7 +66,7 @@ From the test harness, all-wheel drive, default setup (tarmac / gravel / snow):
 | Yaw response t90 at 80 km/h, 0.4 g | 0.11 / 0.19 s | 0.10–0.20 s |
 | Top speed | 199 km/h at the limiter in fifth | 190–200 km/h |
 
-Every merged change must keep `test/consistency.js` clean: 114 scenarios across three drive types and three surfaces, checking ordering, left/right symmetry, physical invariants (ΣFz = m·g, ay = v·r, forces inside the friction circle, deceleration ≤ µ·g, acceleration ≤ P/(m·v)), recovery from slides, handbrake behaviour, determinism and state separation between player and phantom.
+Every merged change must keep `test/consistency.js` clean: 117 scenarios across three drive types and three surfaces, checking ordering, left/right symmetry, physical invariants (ΣFz = m·g, ay = v·r, forces inside the friction circle, deceleration ≤ µ·g, acceleration ≤ P/(m·v)), recovery from slides, handbrake behaviour, determinism and state separation between player and phantom.
 
 ## Controls
 
@@ -69,7 +78,7 @@ Every merged change must keep `test/consistency.js` clean: 114 scenarios across 
 | Handbrake | Space | | A |
 | Gears | E / Q | | bumpers |
 
-`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `I` graphics · `J` render debug · `F1` key list · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
+`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `N` pace notes · `I` graphics · `J` render debug · `F1` key list · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
 
 On phones and tablets (landscape): swipe up on the left half for throttle and down for brake – the travel from where the thumb landed sets the pedal, and full pedal is always within reach – and steer with the thumb on the horizontal slider at the bottom right, absolute like the mouse; it stays where you leave it (or returns to centre, see setup). A thumb-crank wheel is available as an alternative. Handbrake bottom left, gears and view top right. Tilt steering remains available as an option. Logitech wheels get constant-force feedback through WebHID in Chromium browsers.
 

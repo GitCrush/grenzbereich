@@ -2,7 +2,7 @@
 const {loadEngine}=require('./load');const DEG=180/Math.PI,G=9.81;const clamp=(v,a,b)=>v<a?a:v>b?b:v;const f=(x,d=2)=>(x==null?'–':(+x).toFixed(d));
 const issues=[],notes=[];let nTests=0;
 function flag(sev,scen,msg){issues.push({sev,scen,msg});}
-function fresh(cfg){const E=loadEngine();E.PED.threshold=false;Object.assign(E.cfg,{surface:'tarmac',drive:'awd',abs:false,tc:false,auto:true,steer:'direct',uniform:true,ret:false,profile:false,driven:false},cfg||{});E.VERT.amp=cfg&&cfg.rough!==undefined?cfg.rough:0;E.applyDriveSetup(E.cfg.drive);E.selectTrack(cfg&&cfg.track||'rundkurs');return E;}
+function fresh(cfg){const E=loadEngine();E.PED.threshold=false;Object.assign(E.cfg,{surface:'tarmac',drive:'awd',abs:false,tc:false,auto:true,steer:'direct',uniform:true,ret:false,profile:false,driven:false,hazards:'off'},cfg||{});E.VERT.amp=cfg&&cfg.rough!==undefined?cfg.rough:0;E.applyDriveSetup(E.cfg.drive);E.selectTrack(cfg&&cfg.track||'rundkurs');return E;}
 function setSpeed(E,v,gi){const S=E.S,CAR=E.CAR;S.vx=v;S.vy=0;S.r=0;S.delta=0;S.dComp=0;S.psi=0;S.x=0;S.y=0;const w=v/CAR.Rw;S.w=[w,w,w,w];S.Fxr=[0,0,0,0];S.Fyr=[0,0,0,0];S.ax=0;S.ay=0;
   if(gi){S.gi=gi;}else{S.gi=2;for(let g=CAR.gears.length-1;g>=2;g--){const rpm=w*CAR.gears[g].r*CAR.final*9.55;if(rpm>=2900){S.gi=g;break;}}}
   S.rpm=Math.max(CAR.idle,w*CAR.gears[S.gi].r*CAR.final*9.55);S.we=S.rpm*0.10472;S.shiftLock=0.4;S.shiftCut=0;S.boost=0;E.vertInit();}
@@ -236,6 +236,14 @@ for(const [drive,surface,R,vk,stab] of [['awd','gravel',40,62,0],['awd','gravel'
   if(stab&&spun)flag('WARN',scen,'car spins although the driver follows the tutor');
   if(stab&&!spun)notes.push(scen+': held, beta max '+f(bMax,0)+' deg, tutor on '+f(onT,1)+' s');
 }
+
+
+// ---------- 22) Random stages: generated, driveable, the phantom gets round ----------
+for(const seed of [7,31,1234]){const scen=`random stage seed ${seed}`;nTests++;const E=fresh({surface:'gravel',profile:true,driven:true});
+  const d=E.randomTrackDef(seed);if(!d){flag('ERROR',scen,'generator gave up');continue;}E.TRACKS.random=d;E.selectTrack('random');const S=E.S,T=E.TRACK;
+  let minR=1e9;for(const p of T.pts)minR=Math.min(minR,p.R);if(minR<12)flag('WARN',scen,'radius '+f(minR,0)+' m');
+  let t=0,prevS=T.pts[S.idx].s,done=false,off=0;while(t<200&&!done){E.ghostAI();E.step(E.DT);t+=E.DT;const s=T.pts[S.idx].s;if(s<prevS-T.pts[T.N-1].s/2)done=true;prevS=s;if(!S.onTrack)off+=E.DT;}
+  sane(E,scen);if(!done)flag('WARN',scen,'phantom did not complete a lap');else notes.push(scen+': '+d.desc+', phantom lap '+f(t)+' s, off track '+f(off)+' s');}
 
 // ---------- Output ----------
 console.log('Consistency check:',nTests,'scenarios,',issues.length,'findings');
