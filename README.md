@@ -1,40 +1,49 @@
-# Grenzbereich — Rally Vehicle Dynamics
+# Grenzbereich
 
-A browser-based rally driving simulator built as a **training tool for the grip limit**, not as a racing game. *Grenzbereich* is German for the region at the limit of grip, which is what the simulator is built around. One HTML file, no build step, nothing loaded from elsewhere – the one library it uses, three.js r128 (MIT) for the 3D landscape, is included in the file; without WebGL the built-in 2D renderer draws the driver view: a Rally2-class car (1230 kg, 1.6-litre restricted turbo, five-speed sequential, rigid centre coupling) on tarmac, gravel, sand and snow, driven with mouse, keyboard, gamepad, tilt or a steering wheel.
+**Learn to drive a rally car at the limit of grip, right in your browser.**
 
-Every mechanism in the physics is written down in the code and measured against standard manoeuvres. A phantom car drives the same physics on the ideal line, a data logger names the cause of every spin, and a headless test harness runs 100+ scenarios against plausibility rules.
+![Driver view in the 3D landscape on gravel, tarmac and snow](docs/screenshots/driver-view-3d.png)
 
-**[Drive it here](https://gitcrush.github.io/grenzbereich/)** — desktop browser recommended; move the mouse over the view to steer.
+Rally driving is decided in the last ten percent of grip. That is where the front starts to push, the rear steps out, lifting off the throttle turns the car and a locked wheel stops steering. In a real car you rarely get there, and when you do, it is over too fast to see what happened.
 
-The simulator is the single file [`index.html`](index.html) in this repository, served by GitHub Pages at [gitcrush.github.io/grenzbereich/index.html](https://gitcrush.github.io/grenzbereich/index.html). Nothing to install: open that address, or download the file and open it locally.
+Grenzbereich (German for the zone at the limit of grip) makes that zone visible. You drive a Rally2 car on tarmac, gravel, sand and snow while the screen shows what each tyre is doing. A phantom car drives the ideal line beside you, and after every spin a data logger tells you why it happened.
 
-![Driver view in a browser: the 3D landscape on gravel, tarmac and snow](docs/screenshots/driver-view-3d.png)
+It is a training tool, not a racing game. The physics is a textbook vehicle model, measured against real Rally2 figures and checked by 117 test scenarios.
 
-| Low sun on gravel and snow (3D) | 2D renderer, used without WebGL: banked tarmac near the limit |
+**[▶ Drive it here](https://gitcrush.github.io/grenzbereich/)**: desktop browser recommended, nothing to install.
+
+## Getting started
+
+1. Open the link in a desktop browser.
+2. Move the mouse over the view to steer. `↑` `↓` (or `W` `S`) are throttle and brake, `Space` is the handbrake.
+3. `T` opens the track menu with tracks, landscapes, weather, road hazards and random stages. `O` opens the setup, `U` switches the tutor on, `F1` lists every key.
+
+## What you get
+
+- **You see the grip.** The HUD shows tyre usage per axle, slip angle and yaw rate, colour-coded up to the limit.
+- **A phantom on the ideal line.** Same car, same physics, so you can see where it brakes and how much it slides.
+- **A tutor** (`U`) that suggests one steering correction at a time, on the line you are driving rather than the ideal one. It never touches your inputs.
+- **A data logger** that freezes the seconds around a breakaway and names the cause: lift-off, locked wheels, power-on or entry speed.
+- **Pace notes** (`N`) on the rally scale, worked out from the road itself.
+- **Seven landscapes, six weathers and road hazards.** Rain costs tarmac a quarter of its grip, puddles can make the car aquaplane, ice and sand change how it brakes.
+- **Random stages** you can share as a link, plus exercises: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
+- **Any input device**: mouse, keyboard, gamepad, a steering wheel, or a phone held in landscape.
+
+| The top view with the full interface: tyre forces, phantom, elevation profile | Pace notes announce road hazards: gravel in the rain, sand, snow |
 |---|---|
-| ![](docs/screenshots/driver-view-sun.png) | ![](docs/screenshots/driver-view-banked-tarmac.png) |
+| ![](docs/screenshots/top-view-gravel.png) | ![](docs/screenshots/road-hazards.png) |
 
-![Top view with the full interface: tyre forces, dust, skid marks, phantom and elevation profile](docs/screenshots/top-view-gravel.png)
+The whole simulator is the single file [`index.html`](index.html). Nothing is loaded from anywhere else. The one library it uses, three.js r128 (MIT) for the 3D landscape, is included in the file, and without WebGL a built-in 2D renderer takes over. You can open the [live page](https://gitcrush.github.io/grenzbereich/) or download the file and open it locally.
 
-![Landscapes and weathers in the 3D view](docs/screenshots/landscapes.png)
+---
 
-| Mediterranean, desert and savanna | Random stage: the track menu with its curves and elevation dials |
-|---|---|
-| ![](docs/screenshots/landscapes-south.png) | ![](docs/screenshots/random-stage.png) |
-| **Road hazards announced by the pace notes: gravel in the rain, sand, snow** | **Pace notes on the rally scale** |
-| ![](docs/screenshots/road-hazards.png) | ![](docs/screenshots/pace-notes.png) |
+## Under the hood
 
-## What it is for
+The rest of this page is for readers who want to know how it works. The car is a Rally2-class car: 1230 kg, a 1.6-litre restricted turbo, a five-speed sequential gearbox and a rigid centre coupling. Every mechanism in the physics is written down in the code and measured against standard manoeuvres.
 
-The interesting part of driving a rally car happens in the last ten percent of grip: where the front axle starts to push, where the rear steps out, where lifting the throttle rotates the car and where a locked wheel stops steering. Grenzbereich is built around making that region legible:
+**The views.** The top view zooms to cover your braking distance. The driver view uses a horizon-locked camera: the horizon holds still and the bonnet tilts with the car, so climbs, crests and banking read as such. It is built as a flow field: near-field texture, guide posts, road edge, and the vehicle axis against the vanishing point of the velocity. The horizontal distance between those two *is* the slip angle. The landscape is a WebGL scene (three.js) with a terrain mesh from a height field, the road as a ribbon mesh on it, instanced low-poly trees and posts, a sky dome, distant mountains and distance fog, all with a depth buffer, so it is stable from every angle. Without WebGL the 2D renderer draws the driver view in its own palettes. There are three graphics modes (`I`): day, dusk, and simple, the bare channel view the driver view started as.
 
-- **Tyre usage per axle** in the HUD, load-weighted, colour-coded from the torque peak to the grip limit.
-- **A phantom** that drives the same car on the ideal line with a consistent driver model, so you can see where it brakes and how much it slides.
-- **Pace notes** (`N`): the next corners graded on the rally scale (6 fast … 1, hairpin) with tightens, opens, long, over crest and into, crests, dips and road hazards, the distance counting down – worked out from the road, also for random stages.
-- **A tutor** (`U`): one recommendation for the steering wheel, on the band at the top of the screen, that keeps the car stable *and* on the road – on the line you are driving, not the ideal line. It continues your offset and the way you are moving across the road, aims a look-ahead down the road, and gives the wheel angle for that: in grip from the car's own steady-state behaviour (learned while you drive), in a slide from the front axle's direction of travel against the yaw the car cannot sustain. Quiet while the car is settled; shows bends ahead, the road edge, and slides (counter-steer, unwind). It never touches the input.
-- **A data logger** (14-second ring buffer) with an incident detector that freezes the window around a breakaway and names the probable cause — lift-off, locked wheels, power-on, entry speed.
-- **Exercises**: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
-- **Instrumented views**: a top view whose zoom covers your braking distance, and a driver view with a horizon-locked camera – the horizon holds, the bonnet tilts with the car, so climbs, crests and bankings read as such – built as a flow field (near-field texture, guide posts, road edge, vehicle axis vs. velocity vanishing point — the horizontal distance between the two *is* the slip angle), set in a scenery per surface – natural daylight by default (muted palette, strong aerial perspective, high cloud), dusk as an option. The landscape is a 3D scene in WebGL (three.js): a terrain mesh from a height field, the road as a ribbon mesh on it, instanced low-poly trees and posts, sky dome, distant mountains and distance fog, with a depth buffer – stable from every angle. Without WebGL the 2D renderer is used. Elements: distant ridges at infinity that move only with yaw, aerial haze over road and ground, meadows and fields beside the road. Each surface has its own country – tarmac a southern mountain road (snow-capped jagged ranges, cypresses, broad-leaved trees, rock outcrops, clear air), gravel a northern forest (rolling hills, pine and birch, boulders, dusty haze), snow a winter forest (low rounded hills, dense spruce with snow on the branches, snowbanks lining the road). Three graphics modes (`I`): day, dusk, and simple – the bare channel view the driver view started as.
+**The aids.** Tyre usage per axle is load-weighted and colour-coded from the torque peak to the grip limit. The phantom drives the same car with a consistent driver model. The tutor's recommendation continues your offset and the way you are moving across the road, aims a look-ahead down the road and gives the wheel angle for that: in grip from the car's own steady-state behaviour, learned while you drive, and in a slide from the front axle's direction of travel against the yaw the car cannot sustain. It stays quiet while the car is settled and shows bends ahead, the road edge and slides (counter-steer, unwind). The data logger keeps a 14-second ring buffer.
 
 ## Physics model
 
@@ -107,14 +116,18 @@ node consistency.js         # the scenario matrix, 2–3 minutes
 node bench.js               # the reference figures
 ```
 
-With `@napi-rs/canvas` and `node-web-audio-api` installed, `shot.js` renders the driver view without a browser and `soundtest.js` renders sound demos as WAV — useful for reviewing changes. The 2D driver views are such renders; the 3D views come from a headless Chromium (`test/browser/`), and the top view from `uishot.js`, which drives the page in a headless Chromium through Playwright, with the phantom's driver model at the wheel and the full interface around it.
+With `@napi-rs/canvas` and `node-web-audio-api` installed, `shot.js` renders the driver view without a browser and `soundtest.js` renders sound demos as WAV, which is useful for reviewing changes. The scripts in `test/browser/` and `uishot.js` drive the page in a headless Chromium through Playwright; `uishot.js` puts the phantom's driver model at the wheel and renders the top view with the full interface around it.
 
 ## Contributing
 
 Physics changes are welcome when they come with a scenario in the harness and a rationale in the code. The comment style is deliberate: every mechanism states what it models, why it is there and what breaks without it. The single-file structure is kept for distribution; a module split with a build step is the first structural change planned.
 
-Open work is listed in [TODO.md](TODO.md). Good first topics: dynamic road state (each pass sweeps the line and deepens the ruts — DiRT Rally 2.0's 150-step degradation is a useful calibration reference), a phantom driver model for two-wheel drive, a tarmac setup preset, tyre temperature.
+Open work is listed in [TODO.md](TODO.md). Good first topics: dynamic road state (each pass sweeps the line and deepens the ruts; DiRT Rally 2.0's 150-step degradation is a useful calibration reference), a phantom driver model for two-wheel drive, tyre temperature.
+
+## Related
+
+[EC135 Flight Dynamics](https://github.com/GitCrush/EC135-FlightDynamics) takes the same approach to a helicopter: textbook physics, a tutor, and instruments that make the limit legible.
 
 ## Licence
 
-Apache License 2.0 — see [LICENSE](LICENSE). The design decisions and their justification are documented in the code.
+Apache License 2.0, see [LICENSE](LICENSE). The design decisions and their justification are documented in the code.
