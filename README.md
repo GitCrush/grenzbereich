@@ -29,9 +29,11 @@ It is a training tool, not a racing game. The physics is a textbook vehicle mode
 - **Random stages** you can share as a link, plus exercises: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
 - **Any input device**: mouse, keyboard, gamepad, a steering wheel, or a phone held in landscape.
 
-| The top view with the full interface: tyre forces, phantom, elevation profile | Pace notes announce road hazards: gravel in the rain, sand, snow |
-|---|---|
-| ![](docs/screenshots/top-view-gravel.png) | ![](docs/screenshots/road-hazards.png) |
+![Top view with the full interface](docs/screenshots/top-view-gravel.png)
+*The top view with the full interface: tyre forces, dust, skid marks, phantom and elevation profile.*
+
+![Pace notes announcing road hazards](docs/screenshots/road-hazards.png)
+*Pace notes announce what is ahead, here road hazards: gravel in the rain, sand, snow.*
 
 The whole simulator is the single file [`index.html`](index.html). Nothing is loaded from anywhere else. The one library it uses, three.js r128 (MIT) for the 3D landscape, is included in the file, and without WebGL a built-in 2D renderer takes over. You can open the [live page](https://gitcrush.github.io/grenzbereich/) or download the file and open it locally.
 
