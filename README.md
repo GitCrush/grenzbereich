@@ -2,7 +2,7 @@
 
 **Learn to drive a rally car at the limit of grip, right in your browser.**
 
-![Driver view at 114 km/h on an Alpine tarmac stage, with pace notes and the full instrument panel](docs/screenshots/driver-view-alpine.png)
+![Driver view at 92 km/h on an Alpine tarmac stage, tyres at 96 % of their grip, with pace notes and the full instrument panel](docs/screenshots/driver-view-alpine.png)
 
 Rally driving is decided in the last ten percent of grip. That is where the front starts to push, the rear steps out, lifting off the throttle turns the car and a locked wheel stops steering. In a real car you rarely get there, and when you do, it is over too fast to see what happened.
 
