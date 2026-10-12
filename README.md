@@ -8,7 +8,7 @@ Rally driving is decided in the last ten percent of grip. That is where the fron
 
 Grenzbereich (German for the zone at the limit of grip) makes that zone visible. You drive a Rally2 car on tarmac, gravel, sand and snow while the screen shows what each tyre is doing. A phantom car drives the ideal line beside you, and after every spin a data logger tells you why it happened.
 
-It is a training tool, not a racing game. The physics is a textbook vehicle model, measured against real Rally2 figures and checked by 117 test scenarios.
+It is a training tool, not a racing game. The physics is a textbook vehicle model, measured against real Rally2 figures and checked by 129 test scenarios.
 
 **[▶ Drive it here](https://gitcrush.github.io/grenzbereich/)**: desktop browser recommended, nothing to install.
 
@@ -20,10 +20,11 @@ It is a training tool, not a racing game. The physics is a textbook vehicle mode
 
 ## What you get
 
-- **You see the grip.** The HUD shows tyre usage per axle, slip angle and yaw rate, colour-coded up to the limit.
+- **You see the grip.** The HUD shows tyre usage per axle, slip angle and yaw rate, colour-coded up to the limit, and how much grip the road itself gives you here: on gravel the line the earlier cars swept is grippier than the loose material beside it.
 - **A phantom on the ideal line.** Same car, same physics, so you can see where it brakes and how much it slides.
 - **A tutor** (`U`) that suggests one steering correction at a time, on the line you are driving rather than the ideal one. It never touches your inputs.
 - **A data logger** that freezes the seconds around a breakaway and names the cause: lift-off, locked wheels, power-on or entry speed.
+- **An autopilot** (`Y`) that drives your car on the fastest line it finds for it, as deep into the limit as you set, and with rear-wheel drive in long controlled slides.
 - **Pace notes** (`N`) on the rally scale, worked out from the road itself.
 - **Seven landscapes, six weathers and road hazards.** Rain costs tarmac a quarter of its grip, puddles can make the car aquaplane, ice and sand change how it brakes.
 - **Random stages** you can share as a link, plus exercises: skidpad, slalom, chicane, hairpins, sweeper, figure eight, braking box.
@@ -41,11 +42,13 @@ The whole simulator is the single file [`index.html`](index.html). Nothing is lo
 
 ## Under the hood
 
-The rest of this page is for readers who want to know how it works. The car is a Rally2-class car: 1230 kg, a 1.6-litre restricted turbo, a five-speed sequential gearbox and a rigid centre coupling. Every mechanism in the physics is written down in the code and measured against standard manoeuvres.
+The rest of this page is for readers who want to know how it works. The car is a Rally2-class car: 1230 kg, a 1.6-litre restricted turbo, a five-speed sequential gearbox and a rigid centre coupling. With rear-wheel drive it has a chassis of its own, after the front-engined rear-driven rally and club cars: 1150 kg, 50:50 weight distribution, so the rear axle reaches its limit together with the front and the car can be balanced on the throttle. Every mechanism in the physics is written down in the code and measured against standard manoeuvres.
 
 **The views.** The top view zooms to cover your braking distance. The driver view uses a horizon-locked camera: the horizon holds still and the bonnet tilts with the car, so climbs, crests and banking read as such. It is built as a flow field: near-field texture, guide posts, road edge, and the vehicle axis against the vanishing point of the velocity. The horizontal distance between those two *is* the slip angle. The landscape is a WebGL scene (three.js) with a terrain mesh from a height field, the road as a ribbon mesh on it, instanced low-poly trees and posts, a sky dome, distant mountains and distance fog, all with a depth buffer, so it is stable from every angle. Without WebGL the 2D renderer draws the driver view in its own palettes. There are three graphics modes (`I`): day, dusk, and simple, the bare channel view the driver view started as.
 
 **The aids.** Tyre usage per axle is load-weighted and colour-coded from the torque peak to the grip limit. The phantom drives the same car with a consistent driver model. The tutor's recommendation continues your offset and the way you are moving across the road, aims a look-ahead down the road and gives the wheel angle for that: in grip from the car's own steady-state behaviour, learned while you drive, and in a slide from the front axle's direction of travel against the yaw the car cannot sustain. It stays quiet while the car is settled and shows bends ahead, the road edge and slides (counter-steer, unwind). The data logger keeps a 14-second ring buffer.
+
+**The autopilot.** It drives at a share of the car's measured limit (Setup → *Autopilot pace*). Before it drives, the simulator measures the car on a private test ground – acceleration, braking and cornering grip over speed – then searches the fastest line over the whole road for this car (not the line of least curvature: later apexes before long straights, hazards avoided where it pays) and plans the speed for every metre with crests, banking, grade and road hazards. The plan is computed before the first metre and driven as computed; nothing is learned from lap to lap. It steers with a regulator designed every tenth of a second from the car's own physics – the tyre law, the wheel loads with the weight transfer under braking, each wheel's present slip, the steering and the driver's reaction time (Setup → *Autopilot reaction*, from human to machine) – with the car's steady state on the line's curvature as the feed-forward. It eases off if it starts to run wide, and a catch steers the front wheels along their travel when the car steps out far. Setup → *Autopilot: use of the limit range* turns grip driving into slides on loose surfaces: for rear-wheel drive a drift controller computed from the same physical model holds the corners as long slides (about 10° held of a 13° target on the gravel circuit and stage, at the full limit range); all-wheel and front-wheel drive slide with an older logic, a few degrees so far.
 
 ## Physics model
 
@@ -70,14 +73,14 @@ From the test harness, all-wheel drive, default setup (tarmac / gravel / snow):
 | Manoeuvre | Value | Rally2 reference |
 |---|---|---|
 | 0–100 km/h | 3.8 / 5.1 / 7.4 s | 4.3–5 s tarmac, ≈5 s gravel |
-| 100–0 km/h, no ABS | 36.6 / 62.3 / 97.9 m | 32–36 m tarmac, 50–60 m gravel |
+| 100–0 km/h, locked / ABS | 36.6 / 41.9 / 53.7 m locked, 31.7 / 52.2 / 79.8 m ABS | 32–36 m tarmac, 50–60 m gravel |
 | Steady-state lateral limit | 1.25 / 0.87 / 0.53 g | 1.3–1.4 g tarmac, 0.7–0.9 g gravel |
-| Understeer gradient | 1.5 / 3.0 / 5.0 °/g | ≈1–2 °/g tarmac |
+| Understeer gradient | 1.5 / 3.0 / 5.1 °/g | ≈1–2 °/g tarmac |
 | Roll gradient | 3.2 °/g | 3–5 °/g gravel setup |
-| Yaw response t90 at 80 km/h, 0.4 g | 0.11 / 0.19 s | 0.10–0.20 s |
+| Yaw response t90 at 80 km/h, 0.4 g | 0.12 / 0.19 s | 0.10–0.20 s |
 | Top speed | 199 km/h at the limiter in fifth | 190–200 km/h |
 
-Every merged change must keep `test/consistency.js` clean: 117 scenarios across three drive types and three surfaces, checking ordering, left/right symmetry, physical invariants (ΣFz = m·g, ay = v·r, forces inside the friction circle, deceleration ≤ µ·g, acceleration ≤ P/(m·v)), recovery from slides, handbrake behaviour, determinism and state separation between player and phantom.
+Every merged change must keep `test/consistency.js` clean: 129 scenarios across three drive types and three surfaces, checking ordering, left/right symmetry, physical invariants (ΣFz = m·g, ay = v·r, forces inside the friction circle, deceleration ≤ µ·g, acceleration ≤ P/(m·v)), recovery from slides, handbrake behaviour, determinism and state separation between player and phantom.
 
 ## Controls
 
@@ -89,20 +92,21 @@ Every merged change must keep `test/consistency.js` clean: 117 scenarios across 
 | Handbrake | Space | | A |
 | Gears | E / Q | | bumpers |
 
-`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `N` pace notes · `I` graphics · `J` render debug · `F1` key list · `V` top/driver view · `G` phantom · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
+`R` reset · `B` back on track · `T` track menu · `O` setup · `U` tutor · `N` pace notes · `I` graphics · `J` render debug · `F1` key list · `V` top/driver view · `G` phantom · `Y` autopilot · `Z` replay · `L` export CSV · `P` short excerpt · `H` hide HUD · `M` sound · `C` cycle views (driver, top, top north-up) · `+ −` zoom.
 
 On phones and tablets (landscape): swipe up on the left half for throttle and down for brake – the travel from where the thumb landed sets the pedal, and full pedal is always within reach – and steer with the thumb on the horizontal slider at the bottom right, absolute like the mouse; it stays where you leave it (or returns to centre, see setup). A thumb-crank wheel is available as an alternative. Handbrake bottom left, gears and view top right. Tilt steering remains available as an option. Logitech wheels get constant-force feedback through WebHID in Chromium browsers.
 
 ## Setup
 
-The surface decides the setup: choosing Gravel, Tarmac or Snow loads that surface's template (and the rear-wheel-drive values on top if RWD is selected). Four templates load complete, measured setups: **Gravel** (the base: soft, rear-biased roll stiffness, 76 % front brake bias, diff locks 40/25 %), **Tarmac** (stiffer and lower, 52 % front roll stiffness so the inside rear stays on the ground at the limit, 82 % front brake, locks 40/25 %) **Snow** (soft and gentle: 72 % front brake, locks 45/30 %, softer damping) and **RWD drift** (rear-wheel drive with a strong rear diff, 75/50 %, and a stable rear axle). Selecting a drivetrain loads its rear-axle values on top (rear-wheel drive: a plated 1.5-way diff at 68/45 %, 52 % front roll stiffness, 0.32° rear toe-in, 0.17 rear roll steer, 78 % front brake bias – halfway between a neutral race setup and a forgiving one).
+The surface decides the setup: choosing Gravel, Tarmac or Snow loads that surface's template (and the rear-wheel-drive values on top if RWD is selected). Four templates load complete, measured setups: **Gravel** (the base: soft, rear-biased roll stiffness, 76 % front brake bias, diff locks 40/25 %), **Tarmac** (stiffer and lower, 52 % front roll stiffness so the inside rear stays on the ground at the limit, 82 % front brake, locks 40/25 %) **Snow** (soft and gentle: 72 % front brake, locks 45/30 %, softer damping) and **RWD drift** (rear-wheel drive with a strong rear diff, 75/50 %, and a stable rear axle). Selecting a drivetrain loads its rear-axle values on top (rear-wheel drive: a plated 1.5-way diff at 45/25 %, 52 % front roll stiffness, 0.20° rear toe-in, 0.08 rear roll steer, 70 % front brake bias – a little rear toe-in and roll understeer keep it controllable).
 
 The setup panel (`O`) exposes the quantities a rally team would adjust: surface, drive type, centre lock and split, axle lock on drive and coast, brake bias, roll distribution and roll gradient, static camber, toe, rear roll steer, damping, CoG height, ABS and traction control as training aids, anti-lag, keyboard pedal travel and threshold braking, steering mode, road state, elevation profile, and the visual channels of the driver view.
 
 ## Known limitations
 
 - The tyre is a normalised model without temperature, pressure or wear, and its parameters are engineering estimates, not measured data.
-- One car, one circuit with elevation, a stage loop and seven practice layouts. No damage, no collisions with the surroundings.
+- One car, with a chassis of its own for rear-wheel drive; one circuit with elevation, a stage loop, random stages and seven practice layouts. No damage, no collisions with the surroundings.
+- The autopilot does not stay on the road everywhere yet. In the test matrix the all-wheel-drive car leaves the tarmac circuit for 2.1 s per lap at 100 % pace, and rear-wheel drive at 60 % of the limit range leaves the circuit in its slides for 5.6 s per lap on gravel and 20 s on snow. Its controlled slides are worked out for rear-wheel drive only; with all-wheel and front-wheel drive it slides a few degrees.
 - The phantom's driver model is tuned for all-wheel drive; as a front- or rear-wheel-drive car it is slower and occasionally runs wide on gravel.
 - The road state is static: the swept band and the ruts follow the ideal line and do not yet evolve with your own passes.
 - The sound is synthesised in the browser and has not been compared with recordings.
@@ -114,7 +118,7 @@ The physics runs headless in Node against DOM stubs. See [`test/README.md`](test
 ```
 cd test
 python3 extract.py          # pulls the script block out of ../index.html
-node consistency.js         # the scenario matrix, 2–3 minutes
+MATRIX_PART=1 node consistency.js   # the scenario matrix in three parts (1, 2, 3); without MATRIX_PART all of them
 node bench.js               # the reference figures
 ```
 

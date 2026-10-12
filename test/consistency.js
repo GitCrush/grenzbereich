@@ -14,6 +14,8 @@ function sane(E,scen){const S=E.S,V=E.VERT;const vals=[S.vx,S.vy,S.r,S.psi,S.rpm
   if(S.Fz.some(x=>x<-1))flag('ERROR',scen,'negative wheel load');return true;}
 function run(E,T,fn,scen){const n=Math.round(T/E.DT);for(let i=0;i<n;i++){fn&&fn(i*E.DT);E.step(E.DT);if(i%180===0&&!sane(E,scen))return false;}return sane(E,scen);}
 
+const PART=+(process.env.MATRIX_PART||0);   // 1 = everything before the phantom laps, 2 = phantom, autopilot, tutor, random stages, drift, 3 = race autopilot; 0 = all
+if(PART===0||PART===1){
 // ---------- 1) At rest: car standing, nothing moves ----------
 for(const drive of ['awd','fwd','rwd'])for(const surface of ['tarmac','gravel','snow']){
   const scen=`rest ${drive} ${surface}`;nTests++;const E=fresh({drive,surface});const S=E.S;
@@ -33,7 +35,12 @@ for(const drive of ['awd','fwd','rwd'])for(const surface of ['tarmac','gravel','
   while(t<25){const kMax=Math.max(...dr.map(i=>S.kappa[i]));E.IN.thr=1-0.8*clamp((kMax-0.25)/0.5,0,1);E.step(E.DT);t+=E.DT;psiMax=Math.max(psiMax,Math.abs(S.psi-psi0)*DEG);if(v(E)>=100/3.6){t100v=t;break;}}
   sane(E,scen);t100[drive+surface]=t100v;
   if(t100v===null)flag('ERROR',scen,'does not reach 100 km/h in 25 s');
-  else if(t100v<3.2||t100v>14)flag('WARN',scen,'0–100 in '+f(t100v)+' s');
+  /* Window per surface (decision 7 Oct): two-wheel drive on snow is traction-bound. Friction bound with half the weight
+     on the driven axle: (0.52·0.5 − rolling 0.03)·g = 2.3 m/s² → 12 s, before drag and shifts; an ideal slip
+     controller holding the peak slip (κ = kP) reaches 100 km/h in 14.7 s (RWD) and 15.6 s (FWD), this metering in
+     16.2 / 16.7 s, the game's keyboard model (PED.meter) in 15.7 / 16.3 s. The old common limit of 14 s flagged the
+     physics, not a fault; snow now allows 18 s. */
+  else if(t100v<3.2||t100v>(surface==='snow'?18:14))flag('WARN',scen,'0–100 in '+f(t100v)+' s');
   if(psiMax>2)flag('WARN',scen,'car pulls under acceleration: '+f(psiMax,1)+'° yaw');
 }
 for(const drive of ['awd','fwd','rwd']){const a=t100[drive+'tarmac'],b=t100[drive+'gravel'],c=t100[drive+'snow'];
@@ -49,7 +56,10 @@ for(const surface of ['tarmac','gravel','snow'])for(const abs of [false,true]){
   if(Math.abs((S.psi-psi0)*DEG)>4)flag('WARN',scen,'car rotates under braking by '+f((S.psi-psi0)*DEG,1)+'°');
   if(Math.abs(S.y-y0)>1.5)flag('WARN',scen,'lateral drift under braking '+f(S.y-y0,2)+' m');
 }
-for(const s of ['tarmac','gravel','snow'])if(brk[s+'true']>brk[s+'false']*1.15)flag('WARN','braking '+s,'ABS lengthens the braking distance markedly: '+f(brk[s+'true'],1)+' vs '+f(brk[s+'false'],1)+' m');
+// on tarmac ABS must not lengthen the distance; on loose gravel locked wheels build a wedge and stop shorter (review M2, NHTSA: ABS +27 %)
+if(brk['tarmactrue']>brk['tarmacfalse']*1.15)flag('WARN','braking tarmac','ABS lengthens the braking distance markedly: '+f(brk['tarmactrue'],1)+' vs '+f(brk['tarmacfalse'],1)+' m');
+if(brk['graveltrue']<brk['gravelfalse']*1.05)flag('WARN','braking gravel','locked wheels should stop shorter than ABS on loose gravel: ABS '+f(brk['graveltrue'],1)+' vs locked '+f(brk['gravelfalse'],1)+' m');
+notes.push('braking 100-0: gravel ABS '+f(brk['graveltrue'],1)+' m, locked '+f(brk['gravelfalse'],1)+' m; tarmac ABS '+f(brk['tarmactrue'],1)+' m, locked '+f(brk['tarmacfalse'],1)+' m');
 if(!(brk['tarmacfalse']<brk['gravelfalse']&&brk['gravelfalse']<brk['snowfalse']))flag('WARN','braking','ordering of braking distances violated');
 // ---------- 4) Skidpad ramp: left/right symmetry, ordering, understeer ----------
 function ramp(E,vT,sign){const S=E.S,L=E.CAR.a+E.CAR.b;setSpeed(E,vT);const c={};run(E,2,()=>hold(E,vT,c));let t=0,ayMax=0,dAt=0,uf=0,ur=0,past=false;const lin=[];
@@ -104,14 +114,24 @@ for(const drive of ['awd','fwd','rwd'])for(const surface of ['tarmac','gravel'])
   if(P.bMax>75)flag('INFO',scen,'throttle stab leads to a spin (β '+f(P.bMax,0)+'°) – plausible for '+drive+'?');
 }
 // ---------- 7) Catching a slide (counter-steer, throttle off) ----------
+/* Decisions 7 Oct: (1) the slip angle is the true one, atan2(vy, vx): with |vx| a car sliding backwards after a spin
+   read as "recovered". (2) The driver reacts 0.2 s after the slide passes 8° (at 0.7 s at the latest) instead of holding
+   full throttle and 0.6 steer for a fixed 0.7 s: on snow and gravel a rear-wheel-drive car was already 21–27° sideways
+   and rotating when the catch began, and the test measured the provocation, not the catch (RWD snow 70 km/h: no
+   recovery within 4 s, β 64°; reacting at 0.2 s: β max 37°, back in 2.2 s). The late catch is kept as a note for RWD.
+   Throttle stays off in the catch: 20 % throttle on snow spun the RWD car (tried). */
+function catchRun(drive,surface,vk,late){const E=fresh({drive,surface});const S=E.S;setSpeed(E,vk/3.6);let t=0,bMax=0,recT=null,tC=late?0.7:null,ok=true;
+  for(let i=0;i<Math.round(4/E.DT);i++){const b=Math.atan2(S.vy,S.vx);
+    if(tC===null&&Math.abs(b)>8/57.3)tC=Math.min(0.7,t+0.2);const prov=tC===null?t<0.7:t<tC;
+    if(prov){E.IN.steer=0.6;E.IN.thr=1;E.IN.hb=(drive==='fwd')?(t<0.4?1:0):0;}else{E.IN.hb=0;E.IN.steer=clamp(1.3*b/E.CAR.maxSteer,-1,1);E.IN.thr=0;}
+    E.step(E.DT);t+=E.DT;bMax=Math.max(bMax,Math.abs(b)*DEG);if(!prov&&recT===null&&Math.abs(b)*DEG<5&&bMax>10)recT=t;}
+  return {E,bMax,recT};}
 for(const drive of ['awd','fwd','rwd'])for(const surface of ['tarmac','gravel','snow'])for(const vk of [40,70]){
-  const scen=`catch ${drive} ${surface} ${vk}`;nTests++;const E=fresh({drive,surface});const S=E.S;setSpeed(E,vk/3.6);let t=0,bMax=0,recT=null;
-  for(let i=0;i<Math.round(4/E.DT);i++){const b=Math.atan2(S.vy,Math.abs(S.vx));
-    if(t<0.7){E.IN.steer=0.6;E.IN.thr=1;E.IN.hb=(drive==='fwd')?(t<0.4?1:0):0;}else{E.IN.hb=0;E.IN.steer=clamp(1.3*b/E.CAR.maxSteer,-1,1);E.IN.thr=0;}
-    E.step(E.DT);t+=E.DT;bMax=Math.max(bMax,Math.abs(b)*DEG);if(t>0.7&&recT===null&&Math.abs(b)*DEG<5&&bMax>10)recT=t;}
+  const scen=`catch ${drive} ${surface} ${vk}`;nTests++;const {E,bMax,recT}=catchRun(drive,surface,vk,false);
   sane(E,scen);
   if(bMax>10&&recT===null)flag('WARN',scen,'does not recover (β max '+f(bMax,0)+'°)');
   if(bMax>85)flag('INFO',scen,'β max '+f(bMax,0)+'° despite counter-steer');
+  if(drive==='rwd'&&surface!=='tarmac'&&vk===70){const L=catchRun(drive,surface,vk,true);notes.push(scen+': reacting at 0.2 s β max '+f(bMax,0)+'°'+(recT?', back in '+f(recT,1)+' s':', not back')+'; late catch after 0.7 s of full throttle β max '+f(L.bMax,0)+'°'+(L.recT?', back in '+f(L.recT,1)+' s':', not back within 4 s'));}
 }
 // ---------- 8) Handbrake: rear only, engine keeps its revs (AWD) ----------
 for(const surface of ['tarmac','gravel']){const scen=`handbrake ${surface}`;nTests++;const E=fresh({surface});const S=E.S;setSpeed(E,60/3.6);run(E,0.5);const rpm0=S.rpm;
@@ -134,7 +154,39 @@ for(const drive of ['awd','fwd','rwd'])for(const [surface,rough,driven] of [['ta
 // ---------- 11) Determinism ----------
 {const scen='determinism';nTests++;const go=()=>{const E=fresh({surface:'gravel',rough:1});const S=E.S;E.IN.thr=1;E.IN.steer=0.2;run(E,5,null,scen);return [S.x,S.y,S.psi,S.rpm];};
   const a=go(),b=go();if(a.some((x,i)=>Math.abs(x-b[i])>1e-9))flag('WARN',scen,'two identical runs differ: '+a.map(f).join(',')+' / '+b.map(f).join(','));}
+// ---------- 12) Review M1, M4–M6: sand lateral grip, wet tarmac over speed, puddles on loose ground, braking on a grade ----------
+// Thresholds, decided from the measurements before → after the change (test/review.js), each with room on both sides:
+//   M4 sand/gravel lateral limit ≤ 0.92 (before 0.96, after 0.89; µ ratio 0.75 plus the stronger sand plough)
+//   M5 wet/dry at 110 km/h at least 0.025 below 60 km/h (before 0.75 → 0.77, after 0.74 → 0.70)
+//   M6 10 mm puddle at 100 km/h: loose ground keeps ≥ 0.5 of its grip (before 0.10, after 0.70), tarmac ≤ 0.3 (0.08)
+//   M1 ABS braking on 15 % downhill: 98.9 % ± 4 of the flat tyre deceleration (before 83 %, after 100 %)
+{const scen='sand lateral grip (M4)';nTests++;const g=ramp(fresh({surface:'gravel'}),60/3.6,1).ayMax,sd=ramp(fresh({surface:'sand'}),60/3.6,1).ayMax;
+  // the sinkage term acts along the wheel only; sideways the plough supports – sand (µ 75 % of gravel) must stay well below gravel
+  if(sd/g>0.92)flag('WARN',scen,'sand reaches '+f(sd/g*100,0)+' % of the gravel lateral limit ('+f(sd)+' / '+f(g)+' g)');
+  notes.push('Skidpad awd 60 km/h: sand '+f(sd)+' g against gravel '+f(g)+' g ('+f(sd/g*100,0)+' %)');}
+{const scen='wet tarmac over speed (M5)';nTests++;const r=vk=>ramp(fresh({surface:'tarmac',weather:'rain'}),vk/3.6,1).ayMax/ramp(fresh({surface:'tarmac'}),vk/3.6,1).ayMax;
+  const r60=r(60),r110=r(110);if(!(r110<r60-0.025))flag('WARN',scen,'wet/dry lateral limit does not fall with speed: '+f(r60)+' at 60, '+f(r110)+' at 110 km/h');
+  notes.push('wet/dry lateral limit: '+f(r60)+' at 60 km/h, '+f(r110)+' at 110 km/h');}
+{const scen='puddle on loose ground (M6)';nTests++;
+  const grip=(surface,vk)=>{const E=fresh({surface,weather:'rain',track:'bremse'});const T=E.TRACK;T.patches=[{i0:120,i1:126,n0:-5,n1:5,type:'puddle',depth:0.010,seed:1,s1:0,s2:0,s3:0}];
+    T.patchAt=new Array(T.N);for(let i=120;i<=126;i++)T.patchAt[i]=[T.patches[0]];return E.hazardAt(123,0,vk/3.6).mu;};
+  const gt=grip('tarmac',100),gg=grip('gravel',100),gs=grip('sand',100);
+  if(gg<0.5||gs<0.5)flag('WARN',scen,'a 10 mm puddle at 100 km/h leaves '+f(gg)+' (gravel) / '+f(gs)+' (sand) of the grip – hydroplaning on loose ground');
+  if(gt>0.3)flag('WARN',scen,'tarmac no longer hydroplanes in 10 mm at 100 km/h (grip '+f(gt)+')');
+  notes.push('10 mm puddle at 100 km/h, grip factor: tarmac '+f(gt)+', gravel '+f(gg)+', sand '+f(gs));}
+{const scen='braking on a grade (M1)';nTests++;
+  // a Gaussian hill on a long straight, braked at its inflection (15 %, no vertical curvature): the tyre deceleration
+  // follows the wheel load m·g·cos θ – the longitudinal acceleration lies in the road plane and presses nothing into it
+  const RAMP={name:'Ramp',type:'seg',segs:[{s:900},{R:60,a:180},{s:900},{R:60,a:180}],w:7,prof:{z:[[450,43.7,250]],bank:[]}};
+  const go=(prof,s0)=>{const E=fresh({abs:true,profile:prof});E.TRACKS.ramp=RAMP;E.selectTrack('ramp');const S=E.S,T=E.TRACK;let i=0;while(T.pts[i].s<s0)i++;
+    const p=T.pts[i];S.x=p.x;S.y=p.y;S.psi=Math.atan2(p.ty,p.tx);S.idx=i;setSpeed(E,100/3.6,4);S.x=p.x;S.y=p.y;S.psi=Math.atan2(p.ty,p.tx);S.idx=i;E.vertInit();
+    let t=0,a=0,n=0;while(t<1.2){E.IN.thr=0;E.IN.brk=1;E.IN.steer=0;E.step(E.DT);t+=E.DT;if(t>0.4){a-=S.ax;n++;}}return a/n;};
+  const r=go(true,608)/go(false,608);if(Math.abs(r-0.989)>0.04)flag('WARN',scen,'full braking on 15 % downhill: tyre deceleration '+f(r*100,1)+' % of the flat value (expected ≈ 98.9 %)');
+  notes.push('ABS braking on 15 % downhill: tyre deceleration '+f(r*100,1)+' % of the flat value');}
+}
+if(PART===0||PART===2){
 // ---------- 12) Profile: phantom lap, all drives ----------
+// (the phantom drives its own plan – the autopilot envelope these laps used to measure first is not used by it; dropped for runtime)
 for(const drive of ['awd','fwd','rwd'])for(const surface of ['tarmac','gravel']){
   const scen=`phantom lap ${drive} ${surface} profile+line`;nTests++;const E=fresh({drive,surface,profile:true,driven:true,rough:1});const S=E.S,T=E.TRACK;
   let t=0,laps=0,prevS=T.pts[S.idx].s,tLap=null,off=0,ok=true;
@@ -241,10 +293,44 @@ for(const [drive,surface,R,vk,stab] of [['awd','gravel',40,62,0],['awd','gravel'
 // ---------- 22) Random stages: generated, driveable, the phantom gets round ----------
 for(const seed of [7,31,1234]){const scen=`random stage seed ${seed}`;nTests++;const E=fresh({surface:'gravel',profile:true,driven:true});
   const d=E.randomTrackDef(seed);if(!d){flag('ERROR',scen,'generator gave up');continue;}E.TRACKS.random=d;E.selectTrack('random');const S=E.S,T=E.TRACK;
+  E.apEnsure();while(E.AP.job)E.apRun(1e9);E.apEnsure();
   let minR=1e9;for(const p of T.pts)minR=Math.min(minR,p.R);if(minR<12)flag('WARN',scen,'radius '+f(minR,0)+' m');
   let t=0,prevS=T.pts[S.idx].s,done=false,off=0;while(t<200&&!done){E.ghostAI();E.step(E.DT);t+=E.DT;const s=T.pts[S.idx].s;if(s<prevS-T.pts[T.N-1].s/2)done=true;prevS=s;if(!S.onTrack)off+=E.DT;}
   sane(E,scen);if(!done)flag('WARN',scen,'phantom did not complete a lap');else notes.push(scen+': '+d.desc+', phantom lap '+f(t)+' s, off track '+f(off)+' s');}
 
+
+// ---------- 23) Autopilot drift on loose surfaces: the slip angle follows the plan ----------
+// Drives the autopilot as the browser does (ghostCommand(…, 'catch'), the drift layer) and measures against its live
+// target AP.brNow. Until 7 Oct this scenario drove the phantom (ghostAI, no drift) against the old layer's target – its
+// figures were the phantom's. The 5° tolerance is kept: the WARNs stand until the layer holds the angle (TODO).
+// Since 8 Oct it drives with the measured envelope and the racing line, as the user gets it once the plan is ready
+// (before, the fallback plan of the first ~30 s in the browser), the pedal kept by the autopilot (AP.pedBrk) and the
+// inputs reset every step as readInput does. With the fallback plan the angles were RWD gravel 1.8°, AWD 1.0°.
+for(const [drive,surface] of [['rwd','gravel'],['awd','gravel'],['awd','sand'],['rwd','snow']]){const scen=`autopilot drift ${drive} ${surface}`;nTests++;
+  const E=fresh({drive,surface,profile:true,driven:true,rough:1});E.AP.drift=0.6;E.AP.on=true;const S=E.S,T=E.TRACK,L=T.pts[T.N-1].s;   // the autopilot (Y): race plan + catch + slide layer
+  E.apEnsure();while(E.AP.job)E.apRun(1e9);E.apEnsure();while(E.AP.lineJob)E.apLineRun(1e9);E.apEnsure();E.AP.lineOn=true;E.AP.profKey='';E.apEnsure();
+  let t=0,laps=0,prevS=T.pts[S.idx].s,tLap=null,off=0,bS=0,rS=0,n=0;
+  while(t<420&&laps<3){E.IN.steer=0;E.IN.thr=0;E.IN.brk=0;E.IN.hb=0;const c=E.ghostCommand(E.AP.pedBrk||0,E.DT,'catch');E.AP.pedBrk=c.brk;E.IN.steer=c.steer;E.IN.thr=c.thr;E.IN.brk=c.brk;E.IN.hb=c.hb||0;E.step(E.DT);t+=E.DT;const s=T.pts[S.idx].s;if(s<prevS-L/2){laps++;if(laps===2)tLap=t;if(laps===3)tLap=t-tLap;}prevS=s;
+    if(laps>=2){if(!S.onTrack)off+=E.DT;const br=Math.abs(E.AP.brNow||0);if(br>5/57.3){bS+=Math.abs(Math.atan2(S.vy,Math.abs(S.vx)));rS+=br;n++;}}}
+  sane(E,scen);if(laps<3){flag('WARN',scen,'did not complete three laps');continue;}
+  const b=bS/Math.max(1,n)*DEG,r=rS/Math.max(1,n)*DEG;if(Math.abs(b-r)>5)flag('WARN',scen,'slip angle '+f(b)+' deg against a target of '+f(r));
+  notes.push(scen+': 3rd lap '+f(tLap)+' s, slip in corners '+f(b)+' deg (target '+f(r)+'), off track '+f(off)+' s');}
+
+}
+// ---------- 24) Race autopilot (Y): measured envelope, racing line, speed profile, catch, learning – at the default pace ----------
+// Part 3 of the matrix (MATRIX_PART=3), so parts 1 and 2 stay under five minutes; CI runs all parts. Rule decided 7 Oct
+// from the first measurements (94 %: all of circuit/stage × tarmac/gravel × AWD/RWD/FWD on the road; 100 %: stage tarmac
+// AWD 0.4 s off): more than 1 s off track per lap at the default pace is a WARN; lap times are notes to compare.
+if(PART===0||PART===3){
+for(const [tr,surface,drive] of [['rundkurs','tarmac','awd'],['rundkurs','gravel','awd'],['etappe','tarmac','rwd'],['etappe','gravel','fwd']]){
+  const scen=`race autopilot ${tr} ${surface} ${drive}`;nTests++;const E=fresh({drive,surface,profile:true,driven:true,rough:1,track:tr});E.AP.on=true;E.AP.drift=0;
+  E.apEnsure();while(E.AP.job)E.apRun(1e9);E.apEnsure();while(E.AP.lineJob)E.apLineRun(1e9);E.apEnsure();if(!process.env.NOPRE){while(E.AP.preJob)E.apPreRun(1e9);E.apEnsure();}   // envelope, then the racing line
+  const S=E.S,T=E.TRACK,L=T.pts[T.N-1].s;let t=0,laps=0,prevS=T.pts[S.idx].s,tLap=null,off=0;
+  while(t<200&&laps<2){if(Math.round(t/E.DT)%90===0)E.apEnsure();const c=E.ghostCommand(E.IN.brk,E.DT,'catch');E.IN.steer=c.steer;E.IN.thr=c.thr;E.IN.brk=c.brk;E.IN.hb=c.hb||0;E.step(E.DT);t+=E.DT;const s=T.pts[S.idx].s;if(s<prevS-L/2){laps++;if(laps===1)tLap=t;if(laps===2)tLap=t-tLap;}prevS=s;if(laps>=1&&!S.onTrack)off+=E.DT;}
+  sane(E,scen);if(laps<2){flag('WARN',scen,'does not complete two laps');continue;}
+  if(off>1)flag('WARN',scen,f(off,1)+' s off track per lap at pace '+f(E.AP.pace*100,0)+' %');
+  notes.push(scen+': '+f(tLap,1)+' s, off track '+f(off,1)+' s (pace '+f(E.AP.pace*100,0)+' % of the measured limit)');}
+}
 // ---------- Output ----------
 console.log('Consistency check:',nTests,'scenarios,',issues.length,'findings');
 const order={ERROR:0,WARN:1,INFO:2};issues.sort((a,b)=>order[a.sev]-order[b.sev]);

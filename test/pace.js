@@ -1,0 +1,8 @@
+// Phantom (or autopilot with catch) at a raised plan: node pace.js track surface drive aLat aBrk [catch [drift]]
+// (phantom: aLat → Ghost pace, aBrk → its braking share; autopilot: aLat → Autopilot pace, used for cornering and braking)  – lap time, off track, spinning
+const {loadEngine}=require('./load');const f=(x,d=1)=>(+x).toFixed(d);const [tr,surface,drive,aL,aB,mode,drift]=process.argv.slice(2);
+const E=loadEngine();Object.assign(E.cfg,{surface,drive,abs:false,auto:true,steer:'direct',uniform:false,profile:true,driven:true,hazards:'off'});E.VERT.amp=1;E.applyDriveSetup(drive);E.selectTrack(tr);
+E.GAI.aLat=+aL;E.GAI.aBrk=+aB;E.AP.drift=+(drift||0);if(mode==="catch"){E.AP.on=true;E.AP.pace=+aL;}   /* as in the browser: the autopilot drives this car, its gear requests apply */const S=E.S,T=E.TRACK,L=T.pts[T.N-1].s;let t=0,laps=0,prevS=T.pts[S.idx].s,tLap=null,off=0,sp=0,bS=0,bR=0,bN=0;
+while(t<300&&laps<2){const c=E.ghostCommand(E.IN.brk,E.DT,mode==='catch'?'catch':false);E.IN.steer=c.steer;E.IN.thr=c.thr;E.IN.brk=c.brk;E.IN.hb=c.hb||0;E.step(E.DT);t+=E.DT;const s=T.pts[S.idx].s;if(s<prevS-L/2){laps++;if(laps===1)tLap=t;if(laps===2)tLap=t-tLap;}prevS=s;
+  if(laps>=1){if(!S.onTrack)off+=E.DT;if(Math.abs(Math.atan2(S.vy,Math.abs(S.vx)))>1.2)sp+=E.DT;if(Math.abs(E.AP.brNow||0)>5/57.3){bS+=Math.abs(Math.atan2(S.vy,Math.abs(S.vx)));bR+=Math.abs(E.AP.brNow);bN++;}}}
+console.log((mode||'phantom').padEnd(8),tr,surface,drive,'aLat',aL,'aBrk',aB,laps>=2?f(tLap)+' s, off '+f(off)+' s, spinning '+f(sp)+' s'+(+drift?', drift '+f(bS/Math.max(1,bN)*57.3)+'° of '+f(bR/Math.max(1,bN)*57.3)+'°':''):'did not finish');
