@@ -8,7 +8,7 @@ Rally driving is decided in the last ten percent of grip. That is where the fron
 
 Grenzbereich (German for the zone at the limit of grip) makes that zone visible. You drive a Rally2 car on tarmac, gravel, sand and snow while the screen shows what each tyre is doing. A phantom car drives the ideal line beside you, and after every spin a data logger tells you why it happened.
 
-It is a training tool, not a racing game. The physics is a textbook vehicle model, measured against real Rally2 figures and checked by 129 test scenarios.
+It is a training tool, not a racing game. The physics is a textbook vehicle model, measured against real Rally2 figures and checked by 129 test scenarios. Its autopilot drives the same physics with controllers designed on the car's own model, so it is also a test bed for [path tracking and autonomous drifting](#the-autopilot).
 
 **[▶ Drive it here](https://gitcrush.github.io/grenzbereich/)**: desktop browser recommended, nothing to install.
 
@@ -48,8 +48,6 @@ The rest of this page is for readers who want to know how it works. The car is a
 
 **The aids.** Tyre usage per axle is load-weighted and colour-coded from the torque peak to the grip limit. The phantom drives the same car with a consistent driver model. The tutor's recommendation continues your offset and the way you are moving across the road, aims a look-ahead down the road and gives the wheel angle for that: in grip from the car's own steady-state behaviour, learned while you drive, and in a slide from the front axle's direction of travel against the yaw the car cannot sustain. It stays quiet while the car is settled and shows bends ahead, the road edge and slides (counter-steer, unwind). The data logger keeps a 14-second ring buffer.
 
-**The autopilot.** It drives at a share of the car's measured limit (Setup → *Autopilot pace*). Before it drives, the simulator measures the car on a private test ground – acceleration, braking and cornering grip over speed – then searches the fastest line over the whole road for this car (not the line of least curvature: later apexes before long straights, hazards avoided where it pays) and plans the speed for every metre with crests, banking, grade and road hazards. The plan is computed before the first metre and driven as computed; nothing is learned from lap to lap. It steers with a regulator designed every tenth of a second from the car's own physics – the tyre law, the wheel loads with the weight transfer under braking, each wheel's present slip, the steering and the driver's reaction time (Setup → *Autopilot reaction*, from human to machine) – with the car's steady state on the line's curvature as the feed-forward. It eases off if it starts to run wide, and a catch steers the front wheels along their travel when the car steps out far. Setup → *Autopilot: use of the limit range* turns grip driving into slides on loose surfaces: for rear-wheel drive a drift controller computed from the same physical model holds the corners as long slides (about 10° held of a 13° target on the gravel circuit and stage, at the full limit range); all-wheel and front-wheel drive slide with an older logic, a few degrees so far.
-
 ## Physics model
 
 The model is a textbook multi-body vehicle model rather than a soft-body or a game-tuned handling model. It runs at 360 Hz with a semi-implicit Euler integrator.
@@ -81,6 +79,21 @@ From the test harness, all-wheel drive, default setup (tarmac / gravel / snow):
 | Top speed | 199 km/h at the limiter in fifth | 190–200 km/h |
 
 Every merged change must keep `test/consistency.js` clean: 129 scenarios across three drive types and three surfaces, checking ordering, left/right symmetry, physical invariants (ΣFz = m·g, ay = v·r, forces inside the friction circle, deceleration ≤ µ·g, acceleration ≤ P/(m·v)), recovery from slides, handbrake behaviour, determinism and state separation between player and phantom.
+
+## The autopilot
+
+The autopilot (`Y`) is a model-based driver on the same 360 Hz physics you drive. It is deterministic and runs headless in Node, so it doubles as a test bed for path tracking and autonomous drifting. Three settings steer it: *Autopilot pace* (the share of the measured limit it plans with), *Autopilot reaction* (from a human driver's delay and hands to a machine's) and *Autopilot: use of the limit range* (from grip driving to controlled slides).
+
+- **Identification.** Before it drives, the simulator measures the car by driving it on a private test ground: acceleration and braking on a straight, cornering on rings of several radii, all over speed. The resulting envelope is cached per setup, surface and weather.
+- **Planning.** The racing line minimises the quasi-steady lap time over that envelope: the minimum-curvature line is moved by smooth Gaussian offsets in a coordinate descent, which gives later apexes before long straights and avoids hazards where that pays. A speed profile with forward and backward passes adds crests, banking, grade and road hazards. Everything is planned before the first metre and driven as planned; nothing is learned from lap to lap.
+- **Path tracking.** A discrete LQR, redesigned every 0.1 s on a linearisation of the car's own model: the engine's tyre law, the wheel loads with the load transfer under braking, each wheel's present slip, the steering's compliance, and the driver's delay and lag as states. The feed-forward is the car's steady state on the line's curvature at the present speed. It replaced a pure-pursuit law that turned the car far too fast where the line crosses the road. The pedals follow the speed plan; the autopilot eases off when it starts to run wide, and a catch steers the front wheels along their travel when the car steps out far.
+- **Drift control.** For rear-wheel drive, slides are held by a linear-quadratic regulator with integral action on the car's steady slides, which are computed from the same tyre law rather than identified on a test ring. Every slide corner is first driven in a copy of the simulation and left out of the plan if the controller cannot hold it there. All-wheel and front-wheel drive still use an older slide logic.
+
+Measured with `test/acceptance.sh` (11 runs: circuit, stage and three random stages; all-, front- and rear-wheel drive; grip and full slides), all runs stay on the road, the closest approach to the edge is 0.2 m, and rear-wheel drive holds about 10° of a 13° slide target on gravel. Where it still leaves the road is listed under the known limitations.
+
+What it is not: a self-driving stack. The autopilot knows the track, the car and its own state exactly. There is no perception, no sensor noise, no localisation error and no traffic, and the plan covers the whole lap in advance; planning over a moving window ahead is on the list in [TODO.md](TODO.md).
+
+To experiment: `test/drstat.js` drives one run as the browser does and reports the time off the road and the closest approach to the edge; `test/acceptance.sh` and `test/drift-suite.js` are the bars changes are measured against; `loadEngine()` in `test/load.js` exposes the whole simulation to a script. See [`test/README.md`](test/README.md).
 
 ## Controls
 
